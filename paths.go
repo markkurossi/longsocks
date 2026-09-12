@@ -10,4 +10,6 @@ const (
 	EtcDir = "/usr/local/etc"
 
 	ConfigFile = EtcDir + "/longsocks.toml"
+
+	IPCListener = "/tmp/longsocks.sock"
 )

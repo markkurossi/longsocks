@@ -8,6 +8,28 @@ long-lived outbound tunnels.
   <img src="longsocks.png" width="320">
 </p>
 
+``` text
+                 ┌──────────────────────────┐
+                 │        longsocksd        │
+                 │                          │
+ SSH ──SOCKS5──► │   SOCKS listener :1080   │
+ HTTPS           │            │             │
+                 │            ▼             │           ┌──────────┐
+                 │    connection manager  ◄─┼──control──│  diald   │
+                 │       │    │    │        │           │          │
+                 │       │    │    └────────┼───────────┼──proxy───┼──► :22
+                 │       │    │             │           │          │
+                 │       │    └─────────────┼───────────┼──proxy───┼──► :22
+                 │       │                  │           │          │
+                 │       └──────────────────┼───────────┼──proxy───┼──► :443
+                 │                          │           │          │
+ longsocks       │   /tmp/longsocks.sock    │           └──────────┘
+     │           └──────────────────────────┘
+     │                        ▲
+     │                        │
+     └────────────────────────┘
+```
+
 **longsocksd**
 The server-side relay and SOCKS5 proxy.
 
@@ -15,5 +37,5 @@ The server-side relay and SOCKS5 proxy.
 The daemon running on target machines that establishes outbound
 tunnels.
 
-**longsock**
+**longsocks**
 The proxy client command.

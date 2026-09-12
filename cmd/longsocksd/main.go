@@ -7,10 +7,16 @@
 package main
 
 import (
+	"encoding/binary"
 	"log"
 	"os"
+	"sync"
 
 	"github.com/markkurossi/longsocks"
+)
+
+var (
+	bo = binary.BigEndian
 )
 
 func main() {
@@ -30,4 +36,15 @@ func main() {
 		log.Printf("loaded identity %v", cfg.Longsocksd.CertificateFile)
 	}
 	_ = identity
+
+	ipc, err := NewIPCListener(longsocks.IPCListener)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var wg sync.WaitGroup
+
+	wg.Go(ipc.Run)
+
+	wg.Wait()
 }

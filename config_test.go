@@ -7,7 +7,6 @@
 package longsocks
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -17,13 +16,14 @@ var config = `
 hostname = "nap.ephemelier.com"
 port = 8103
 
-certificate = """
------BEGIN CERTIFICATE-----
-...
------END CERTIFICATE-----
-"""
+certificate_file = "/usr/local/etc/longsocks.d/proxy.crt"
+private_key_file = "/usr/local/etc/longsocks.d/proxy.key"
 
-private_key_file = "/usr/local/etc/longsocks/proxy.key"
+[longsocksd.certificate]
+
+country = ["FI"]
+organization = ["Ephemelier"]
+common_name = "Longsocks"
 
 [socks]
 
@@ -43,5 +43,5 @@ func TestConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Printf("cfg: %#v\n", cfg)
+	_ = cfg
 }
