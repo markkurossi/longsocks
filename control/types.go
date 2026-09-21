@@ -4,6 +4,7 @@
 // All rights reserved.
 //
 
+// Package control defines the control protocol messages.
 package control
 
 //go:generate stringer -type=MsgType -trimprefix=Msg

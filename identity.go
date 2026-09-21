@@ -172,8 +172,8 @@ func SaveCertificate(name string, der []byte) error {
 	return os.WriteFile(name, der, 0666)
 }
 
-func LoadIdentity(cfg *Config) (*Identity, error) {
-	pemEncoded, err := os.ReadFile(cfg.Longsocksd.PrivateKeyFile)
+func LoadIdentity(privFile, certFile string) (*Identity, error) {
+	pemEncoded, err := os.ReadFile(privFile)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func LoadIdentity(cfg *Config) (*Identity, error) {
 		return nil, err
 	}
 
-	der, err := os.ReadFile(cfg.Longsocksd.CertificateFile)
+	der, err := os.ReadFile(certFile)
 	if err != nil {
 		return nil, err
 	}

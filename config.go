@@ -32,7 +32,7 @@ type Config struct {
 		Socks struct {
 			Listen string
 		}
-		Http struct {
+		HTTP struct {
 			Listen string
 		}
 	}

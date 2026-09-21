@@ -24,12 +24,13 @@ private_key_file = "/usr/local/etc/longsocks.d/proxy.key"
 country = ["FI"]
 organization = ["Ephemelier"]
 common_name = "Longsocks"
+host_common_name = "Longsocks Host"
 
-[socks]
+[longsocksd.socks]
 
 listen = ":1080"
 
-[http]
+[longsocksd.http]
 
 listen = ":8443"
 

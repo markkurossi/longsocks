@@ -29,7 +29,8 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	identity, err = longsocks.LoadIdentity(config)
+	identity, err = longsocks.LoadIdentity(config.Longsocksd.PrivateKeyFile,
+		config.Longsocksd.CertificateFile)
 	if os.IsNotExist(err) {
 		log.Printf("creating identity %v", config.Longsocksd.CertificateFile)
 		identity, err = longsocks.CreateIdentity(config)

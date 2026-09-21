@@ -9,7 +9,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"time"
@@ -31,7 +30,8 @@ func NewControlListener(id *longsocks.Identity) (*Control, error) {
 
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{tlsCert},
-		RootCAs:      caCertPool,
+		ClientCAs:    caCertPool,
+		ClientAuth:   tls.VerifyClientCertIfGiven,
 		MinVersion:   tls.VersionTLS12,
 	}
 
@@ -89,33 +89,15 @@ func (ctrl *Control) handler(conn net.Conn) {
 		}
 		return
 	}
-
-	// mTLS connection.
-	fmt.Println("verifying client certificate")
-	clientCert := state.PeerCertificates[0]
-
-	opts := x509.VerifyOptions{
-		Roots:     ctrl.caCertPool,
-		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-	}
-
-	// Intermediate certificates (if any sent by the client).
-	if len(state.PeerCertificates) > 1 {
-		intermediates := x509.NewCertPool()
-		for _, cert := range state.PeerCertificates[1:] {
-			intermediates.AddCert(cert)
-		}
-		opts.Intermediates = intermediates
-	}
-
-	chains, err := clientCert.Verify(opts)
-	if err != nil {
-		log.Printf("client certificate verification failed: %v", err)
+	if len(state.VerifiedChains) == 0 {
+		log.Printf("mTLS with invalid client certificate")
 		return
 	}
 
-	fmt.Printf("Client certificate successfully verified! Subject: %s\n",
-		chains[0][0].Subject)
+	clientCert := state.VerifiedChains[0][0]
+
+	fmt.Printf("Client certificate valid: Subject=%s, DNSNames=%v\n",
+		clientCert.Subject, clientCert.DNSNames)
 
 	// Start processing commands from the authenticated control
 	// connection.
@@ -123,7 +105,7 @@ func (ctrl *Control) handler(conn net.Conn) {
 	// Read and write data over the verified connection...
 	buf := make([]byte, 1024)
 	n, err := conn.Read(buf)
-	if err != nil && err != io.EOF {
+	if err != nil {
 		return
 	}
 	log.Printf("Received payload: %s", string(buf[:n]))
