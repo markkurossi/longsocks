@@ -16,35 +16,43 @@ import (
 )
 
 var (
-	bo = binary.BigEndian
+	bo       = binary.BigEndian
+	config   *longsocks.Config
+	identity *longsocks.Identity
 )
 
 func main() {
-	cfg, err := longsocks.LoadConfig()
+	var err error
+
+	config, err = longsocks.LoadConfig("longsocksd.toml")
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	identity, err := longsocks.LoadIdentity(cfg)
+	identity, err = longsocks.LoadIdentity(config)
 	if os.IsNotExist(err) {
-		log.Printf("creating identity %v", cfg.Longsocksd.CertificateFile)
-		identity, err = longsocks.CreateIdentity(cfg)
+		log.Printf("creating identity %v", config.Longsocksd.CertificateFile)
+		identity, err = longsocks.CreateIdentity(config)
 		if err != nil {
 			log.Fatalf("failed to create identity: %v", err)
 		}
 	} else {
-		log.Printf("loaded identity %v", cfg.Longsocksd.CertificateFile)
+		log.Printf("loaded identity %v", config.Longsocksd.CertificateFile)
 	}
-	_ = identity
+
+	var wg sync.WaitGroup
 
 	ipc, err := NewIPCListener(longsocks.IPCListener)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	var wg sync.WaitGroup
-
 	wg.Go(ipc.Run)
+
+	ctrl, err := NewControlListener(identity)
+	if err != nil {
+		log.Fatal(err)
+	}
+	wg.Go(ctrl.Run)
 
 	wg.Wait()
 }

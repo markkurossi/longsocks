@@ -67,7 +67,30 @@ func daemonControl(args []string) error {
 	if n != l {
 		return fmt.Errorf("unmarshal: %v vs. %v", n, l)
 	}
-	fmt.Printf("resp: %v\n", values)
+	if len(values) < 2 {
+		return fmt.Errorf("unexpected result: %v", values)
+	}
+	switch values[0] {
+	case "OK":
+		fmt.Printf(`
+Save this configuration file to host at /usr/local/etc/longsocksd/diald.toml:
+
+----------------------------------------------------------------------
+%s----------------------------------------------------------------------
+`, values[1])
+
+		fmt.Printf(`
+Run this command at host to init diald:
+
+----------------------------------------------------------------------
+%s
+----------------------------------------------------------------------
+`,
+			values[2])
+
+	default:
+		return fmt.Errorf("%v", values)
+	}
 
 	return nil
 }

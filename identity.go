@@ -10,12 +10,14 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"math"
 	"math/big"
+	"net"
 	"os"
 	"time"
 )
@@ -25,8 +27,67 @@ type Identity struct {
 	Cert *x509.Certificate
 }
 
+func (id *Identity) CertPEM() []byte {
+	return pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: id.Cert.Raw,
+	})
+}
+
+func (id *Identity) TLSCertificate() tls.Certificate {
+	return tls.Certificate{
+		Certificate: [][]byte{id.Cert.Raw},
+		PrivateKey:  id.Priv,
+		Leaf:        id.Cert,
+	}
+}
+
+func (id *Identity) CreateHostCertificate(cfg *Config, dnsNames []string,
+	csr *x509.CertificateRequest) (*x509.Certificate, error) {
+
+	serial, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
+	if err != nil {
+		return nil, err
+	}
+	subject := pkix.Name{
+		Country:      cfg.Longsocksd.Certificate.Country,
+		Organization: cfg.Longsocksd.Certificate.Organization,
+		CommonName:   cfg.Longsocksd.Certificate.HostCommonName,
+	}
+	now := time.Now()
+
+	tmpl := &x509.Certificate{
+		SignatureAlgorithm: x509.ECDSAWithSHA512,
+		SerialNumber:       serial,
+		Subject:            subject,
+		NotBefore:          now,
+		NotAfter:           now.Add(time.Hour * 24 * 365),
+		KeyUsage:           x509.KeyUsageDigitalSignature,
+		ExtKeyUsage: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageClientAuth,
+		},
+		BasicConstraintsValid: true,
+		DNSNames:              dnsNames,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, id.Cert,
+		csr.PublicKey, id.Priv)
+	if err != nil {
+		return nil, err
+	}
+	cert, err := x509.ParseCertificate(der)
+	if err != nil {
+		return nil, err
+	}
+
+	return cert, nil
+}
+
+func CreateKeypair() (*ecdsa.PrivateKey, error) {
+	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+}
+
 func CreateIdentity(cfg *Config) (*Identity, error) {
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	priv, err := CreateKeypair()
 	if err != nil {
 		return nil, err
 	}
@@ -57,6 +118,17 @@ func CreateIdentity(cfg *Config) (*Identity, error) {
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 		MaxPathLenZero:        true,
+
+		DNSNames: []string{
+			cfg.Longsocksd.Hostname,
+			"localhost",
+			"*.localhost",
+			"*.local",
+		},
+		IPAddresses: []net.IP{
+			net.ParseIP("127.0.0.1"),
+			net.ParseIP("::1"),
+		},
 	}
 	der, err := x509.CreateCertificate(rand.Reader, caTmpl, caTmpl,
 		&priv.PublicKey, priv)
@@ -94,6 +166,10 @@ func SavePrivateKey(name string, privateKey *ecdsa.PrivateKey) error {
 		Bytes: x509Encoded,
 	})
 	return os.WriteFile(name, data, 0600)
+}
+
+func SaveCertificate(name string, der []byte) error {
+	return os.WriteFile(name, der, 0666)
 }
 
 func LoadIdentity(cfg *Config) (*Identity, error) {

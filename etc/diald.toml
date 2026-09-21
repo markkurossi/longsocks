@@ -1,0 +1,10 @@
+[diald]
+
+ca = """
+---pem---
+"""
+
+certificate_file = "/usr/local/etc/longsocks.d/diald.crt"
+private_key_file = "/usr/local/etc/longsocks.d/diald.key"
+
+allowed_ports = [22, 80, 443, 8443]

@@ -6,12 +6,15 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
+	"text/template"
 
+	"github.com/markkurossi/go-libs/uuid"
 	"github.com/markkurossi/longsocks"
 )
 
@@ -92,13 +95,13 @@ func (c *Connection) processMessages() error {
 		fmt.Printf("args: %v\n", args)
 
 		var responseValues []string
-		if len(args) == 0 {
-			responseValues = []string{"ERROR", "no command"}
+
+		result, err := processCommand(args)
+		if err != nil {
+			responseValues = []string{"ERROR", err.Error()}
 		} else {
-			switch args[0] {
-			default:
-				responseValues = []string{"ERROR", "unknown command", args[0]}
-			}
+			responseValues = append(responseValues, "OK")
+			responseValues = append(responseValues, result...)
 		}
 
 		response, err := longsocks.Marshal(responseValues)
@@ -114,5 +117,85 @@ func (c *Connection) processMessages() error {
 		if err != nil {
 			return err
 		}
+	}
+}
+
+var (
+	dialdConfig = `# Diald config for {{.Hostname}}
+
+[longsocksd]
+
+hostname = "{{.LongsocksdHostname}}"
+port = {{.LongsocksdPort}}
+
+[diald]
+
+ca = """
+{{.CACertificate}}"""
+
+certificate_file = "/usr/local/etc/longsocks.d/diald.crt"
+private_key_file = "/usr/local/etc/longsocks.d/diald.key"
+`
+	dialdTmp = template.Must(template.New("diald.conf").Parse(dialdConfig))
+
+	hostInitCmd  = "diald init {{.ID}}"
+	hostInitTmpl = template.Must(template.New("diald.init").Parse(hostInitCmd))
+)
+
+func processCommand(args []string) ([]string, error) {
+	if len(args) == 0 {
+		return nil, fmt.Errorf("no command")
+	}
+	switch args[0] {
+	case "host-init":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("usage: %v hostname", args[0])
+		}
+		host, err := NewRegistration(args[1])
+		if err != nil {
+			return nil, err
+		}
+		var values = struct {
+			Hostname           string
+			LongsocksdHostname string
+			LongsocksdPort     int
+			CACertificate      string
+			ID                 string
+		}{
+			Hostname:           host.Name,
+			LongsocksdHostname: config.Longsocksd.Hostname,
+			LongsocksdPort:     config.Longsocksd.Port,
+			ID:                 host.ID.String(),
+			CACertificate:      string(identity.CertPEM()),
+		}
+
+		var config bytes.Buffer
+		err = dialdTmp.Execute(&config, values)
+		if err != nil {
+			return nil, err
+		}
+
+		var cmd bytes.Buffer
+		err = hostInitTmpl.Execute(&cmd, values)
+		if err != nil {
+			return nil, err
+		}
+
+		return []string{config.String(), cmd.String()}, nil
+
+	case "ls", "list":
+		var result []string
+		for k, v := range hosts {
+			var id string
+			if uuid.Nil.Compare(v.ID) != 0 {
+				id = v.ID.String()
+			}
+			value := fmt.Sprintf("%v|%v", k, id)
+			result = append(result, value)
+		}
+		return result, nil
+
+	default:
+		return nil, fmt.Errorf("unknown command: %v", args[0])
 	}
 }

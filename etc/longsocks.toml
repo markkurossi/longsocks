@@ -1,0 +1,22 @@
+[longsocksd]
+
+hostname = "hostname.of.the.longsocksd.proxy"
+port = 8103
+
+certificate_file = "/usr/local/etc/longsocks.d/proxy.crt"
+private_key_file = "/usr/local/etc/longsocks.d/proxy.key"
+
+[longsocksd.certificate]
+
+country = ["FI"]
+organization = ["Ephemelier"]
+common_name = "Longsocks"
+host_common_name = "Longsocks Host"
+
+[longsocksd.socks]
+
+listen = ":1080"
+
+[longsocksd.http]
+
+listen = ":8443"

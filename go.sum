@@ -1,2 +1,4 @@
+github.com/markkurossi/go-libs v0.0.0-20260903073204-4f086e4e9b2b h1:6/I22oOaQCadVZoGCdH/SYATs7I2nYorv0dOPubPBK0=
+github.com/markkurossi/go-libs v0.0.0-20260903073204-4f086e4e9b2b/go.mod h1:MXTyxtBU9sniOp1LZtEBB1kFv3pCzea6PFPvWZkaues=
 github.com/pelletier/go-toml/v2 v2.4.3 h1:GTRvJQutkOSftxIFD5xw9aepkYNuPWmVJpffdDPYVpY=
 github.com/pelletier/go-toml/v2 v2.4.3/go.mod h1:2gIqNv+qfxSVS7cM2xJQKtLSTLUE9V8t9Stt+h56mCY=

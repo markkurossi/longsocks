@@ -24,19 +24,23 @@ type Config struct {
 		CertificateFile string `toml:"certificate_file"`
 		PrivateKeyFile  string `toml:"private_key_file"`
 		Certificate     struct {
-			Country      []string `toml:"country"`
-			Organization []string `toml:"organization"`
-			CommonName   string   `toml:"common_name"`
+			Country        []string `toml:"country"`
+			Organization   []string `toml:"organization"`
+			CommonName     string   `toml:"common_name"`
+			HostCommonName string   `toml:"host_common_name"`
 		} `toml:"certificate"`
-	}
-	Socks struct {
-		Listen string
-	}
-	Http struct {
-		Listen string
+		Socks struct {
+			Listen string
+		}
+		Http struct {
+			Listen string
+		}
 	}
 	Diald struct {
-		AllowedPorts []int `toml:"allowed_ports"`
+		CA              string `toml:"ca"`
+		CertificateFile string `toml:"certificate_file"`
+		PrivateKeyFile  string `toml:"private_key_file"`
+		AllowedPorts    []int  `toml:"allowed_ports"`
 	}
 }
 
@@ -54,8 +58,8 @@ func Parse(data []byte) (*Config, error) {
 	return &cfg, nil
 }
 
-func LoadConfig() (*Config, error) {
-	f, err := os.Open(ConfigFile)
+func LoadConfig(name string) (*Config, error) {
+	f, err := os.Open(ConfigFile(name))
 	if err != nil {
 		return nil, err
 	}
