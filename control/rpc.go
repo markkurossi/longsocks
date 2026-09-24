@@ -16,6 +16,7 @@ import (
 
 var bo = binary.BigEndian
 
+// RPC implements a RPC call.
 func RPC(conn net.Conn, req interface{}) (MsgType, []byte, error) {
 	err := Send(conn, req)
 	if err != nil {
@@ -25,6 +26,7 @@ func RPC(conn net.Conn, req interface{}) (MsgType, []byte, error) {
 	return Recv(conn)
 }
 
+// Send sends request to the connection.
 func Send(conn net.Conn, req interface{}) error {
 	data, err := longsocks.Marshal(req)
 	if err != nil {
@@ -61,8 +63,8 @@ func Send(conn net.Conn, req interface{}) error {
 	return nil
 }
 
+// Recv reads a response from the connection.
 func Recv(conn net.Conn) (MsgType, []byte, error) {
-
 	var hdr [5]byte
 
 	_, err := conn.Read(hdr[:])
