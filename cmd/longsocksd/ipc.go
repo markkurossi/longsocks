@@ -162,7 +162,7 @@ func processCommand(args []string) ([]string, error) {
 			CACertificate      string
 			ID                 string
 		}{
-			Hostname:           host.Name,
+			Hostname:           fmt.Sprintf("%v", host.Names),
 			LongsocksdHostname: config.Longsocksd.Hostname,
 			LongsocksdPort:     config.Longsocksd.Port,
 			ID:                 host.ID.String(),

@@ -8,7 +8,9 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -56,7 +58,7 @@ func (ctrl *Control) Run() {
 	for {
 		conn, err := ctrl.listener.Accept()
 		if err != nil {
-			log.Printf("Failed to accept connection: %v", err)
+			log.Printf("failed to accept control connection: %v", err)
 			continue
 		}
 		go ctrl.handler(conn)
@@ -96,21 +98,33 @@ func (ctrl *Control) handler(conn net.Conn) {
 
 	clientCert := state.VerifiedChains[0][0]
 
-	fmt.Printf("Client certificate valid: Subject=%s, DNSNames=%v\n",
-		clientCert.Subject, clientCert.DNSNames)
+	fmt.Printf("client for DNS names %v\n", clientCert.DNSNames)
 
 	// Start processing commands from the authenticated control
 	// connection.
 
-	// Read and write data over the verified connection...
-	buf := make([]byte, 1024)
-	n, err := conn.Read(buf)
+	msgType, data, err := control.Recv(conn)
 	if err != nil {
+		log.Printf("failed to read message: %v", err)
 		return
 	}
-	log.Printf("Received payload: %s", string(buf[:n]))
+	switch msgType {
+	case control.MsgCtrlCh:
+		var msg control.CtrlCh
+		_, err = longsocks.UnmarshalFrom(data, &msg)
+		if err != nil {
+			log.Printf("invalid %v message: %v", msgType, err)
+			return
+		}
+		cc := &ControlConnection{
+			ch:   make(chan int),
+			conn: conn,
+		}
+		cc.Run()
 
-	fmt.Fprintln(conn, "Hello, secure world via Custom CA!")
+	default:
+		log.Printf("msg %v not implemented yet:\n%s", msgType, hex.Dump(data))
+	}
 }
 
 func (ctrl *Control) tokenHandler(conn net.Conn) error {
@@ -159,9 +173,8 @@ func (ctrl *Control) tokenHandler(conn net.Conn) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("hostname: %v\n", host.Name)
-		cert, err := identity.CreateHostCertificate(config,
-			[]string{host.Name}, csr)
+		fmt.Printf("hostname: %v\n", host.Names)
+		cert, err := identity.CreateHostCertificate(config, host.Names, csr)
 		if err != nil {
 			return err
 		}
@@ -184,4 +197,53 @@ func (ctrl *Control) tokenHandler(conn net.Conn) error {
 	_, err = conn.Write(data)
 
 	return err
+}
+
+type ControlConnection struct {
+	ch   chan int
+	conn net.Conn
+}
+
+func (cc *ControlConnection) Run() {
+	err := cc.eventLoop()
+	if err != io.EOF {
+		log.Printf("connnection terminated: %v", err)
+	}
+}
+
+func (cc *ControlConnection) eventLoop() error {
+	for {
+		select {
+		case i := <-cc.ch:
+			log.Printf("new job %v", i)
+
+		case <-time.After(5 * time.Second):
+			log.Printf("ping")
+
+			reqTime := time.Now().UnixMicro()
+			t, data, err := control.RPC(cc.conn, control.Ping{
+				Time: uint64(reqTime),
+			})
+			if err != nil {
+				return err
+			}
+			respTime := time.Now().UnixMicro()
+			expectedTime := reqTime + (respTime-reqTime)/2
+
+			switch t {
+			case control.MsgPong:
+				var msg control.Pong
+				_, err := longsocks.UnmarshalFrom(data, &msg)
+				if err != nil {
+					return err
+				}
+				d := int64(msg.Time) - expectedTime
+				log.Printf("keepalive: delta=%v", time.Duration(d*1000))
+
+			default:
+				log.Printf("%v:\n%s", t, hex.Dump(data))
+				return fmt.Errorf("%v unsupported", t)
+			}
+		}
+	}
 }

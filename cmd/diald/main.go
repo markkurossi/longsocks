@@ -10,14 +10,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/binary"
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"log"
-	"net"
+	"math/rand"
+	"time"
 
 	"github.com/markkurossi/longsocks"
-	"github.com/markkurossi/longsocks/control"
 )
 
 var (
@@ -38,9 +37,7 @@ func main() {
 
 	if len(flag.Args()) == 0 {
 		err = run()
-		if err != nil {
-			log.Fatal(err)
-		}
+		log.Fatal(err)
 		log.Printf("diald terminated")
 	} else {
 		err = processCommands(flag.Args())
@@ -48,45 +45,6 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-}
-
-func tx(conn net.Conn, req interface{}) (control.MsgType, []byte, error) {
-	data, err := longsocks.Marshal(req)
-	if err != nil {
-		return control.MsgError, nil, err
-	}
-
-	var msgType control.MsgType
-	switch req.(type) {
-	case control.HostInit:
-		msgType = control.MsgHostInit
-	default:
-		return control.MsgError, nil, fmt.Errorf("unknown request [%T]", req)
-	}
-
-	var hdr [5]byte
-	hdr[0] = byte(msgType)
-	bo.PutUint32(hdr[1:], uint32(len(data)))
-
-	_, err = conn.Write(hdr[:])
-	if err != nil {
-		return control.MsgError, nil, err
-	}
-	_, err = conn.Write(data)
-	if err != nil {
-		return control.MsgError, nil, err
-	}
-
-	_, err = conn.Read(hdr[:])
-	if err != nil {
-		return control.MsgError, nil, err
-	}
-	fmt.Printf("tx: hdr:\n%s", hex.Dump(hdr[:]))
-	l := bo.Uint32(hdr[1:])
-	data = make([]byte, l)
-	_, err = conn.Read(data)
-
-	return control.MsgType(hdr[0]), data, err
 }
 
 func run() error {
@@ -114,14 +72,34 @@ func run() error {
 	}
 	addr := fmt.Sprintf("%v:%v", config.Longsocksd.Hostname,
 		config.Longsocksd.Port)
-	conn, err := dialer.Dial("tcp", addr)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
 
-	log.Printf("diald started")
-	return nil
+	delay := 1 * time.Second
+
+	for {
+		log.Printf("dialing %v", addr)
+		conn, err := dialer.Dial("tcp", addr)
+		if err != nil {
+			log.Printf("dial failed: %v", err)
+			delay *= 2
+			if delay > 64*time.Second {
+				delay = 64 * time.Second
+			}
+		} else {
+			log.Printf("diald connected")
+			err = processControl(conn)
+			if err != nil {
+				log.Printf("diald connection terminated: %v", err)
+			} else {
+				log.Printf("diald disconnected")
+			}
+			delay = 1 * time.Second
+		}
+
+		sleep := time.Duration(rand.Float64() * float64(delay))
+
+		log.Printf("retrying in %v (backoff %v)", sleep, delay)
+		time.Sleep(sleep)
+	}
 }
 
 func getCACertificates() (*x509.CertPool, error) {

@@ -59,7 +59,7 @@ func processCommands(args []string) error {
 		}
 		defer conn.Close()
 
-		msgType, resp, err := tx(conn, control.HostInit{
+		msgType, resp, err := control.RPC(conn, control.HostInit{
 			CSR: csr,
 		})
 		if err != nil {

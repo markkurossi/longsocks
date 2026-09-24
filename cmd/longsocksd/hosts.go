@@ -7,6 +7,8 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net"
 	"strings"
 	"sync"
 
@@ -20,8 +22,12 @@ var (
 )
 
 type Host struct {
-	Name string
-	ID   uuid.UUID
+	Names []string
+	ID    uuid.UUID
+}
+
+func (host *Host) String() string {
+	return fmt.Sprintf("%v", host.Names)
 }
 
 func NewRegistration(hostname string) (*Host, error) {
@@ -31,8 +37,8 @@ func NewRegistration(hostname string) (*Host, error) {
 	}
 
 	host := &Host{
-		Name: strings.ToLower(hostname),
-		ID:   id,
+		Names: []string{strings.ToLower(hostname)},
+		ID:    id,
 	}
 	idstr := strings.ToUpper(id.String())
 
@@ -40,8 +46,6 @@ func NewRegistration(hostname string) (*Host, error) {
 	defer m.Unlock()
 
 	registrations[idstr] = host
-
-	hosts[host.Name] = host
 
 	return host, nil
 }
@@ -60,4 +64,23 @@ func Registration(id string) (*Host, error) {
 	delete(registrations, id)
 
 	return host, nil
+}
+
+func NewHost(names []string, conn net.Conn) {
+	host := &Host{
+		Names: names,
+	}
+
+	m.Lock()
+	defer m.Unlock()
+
+	for _, name := range names {
+		hosts[name] = host
+	}
+
+	go host.control()
+}
+
+func (host *Host) control() {
+	log.Printf("control handler for host %v", host)
 }

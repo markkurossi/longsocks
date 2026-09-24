@@ -16,7 +16,15 @@ const (
 	MsgOk
 	MsgHostInit
 	MsgHostInitResp
+	MsgCtrlCh
+	MsgAppCh
+	MsgPing
+	MsgPong
 )
+
+type Error struct {
+	Error string
+}
 
 type HostInit struct {
 	CSR []byte
@@ -24,4 +32,16 @@ type HostInit struct {
 
 type HostInitResp struct {
 	Cert []byte
+}
+
+type CtrlCh struct {
+	Msg string
+}
+
+type Ping struct {
+	Time uint64
+}
+
+type Pong struct {
+	Time uint64
 }

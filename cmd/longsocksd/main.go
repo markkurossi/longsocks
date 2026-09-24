@@ -55,5 +55,11 @@ func main() {
 	}
 	wg.Go(ctrl.Run)
 
+	socks, err := NewSocksListener()
+	if err != nil {
+		log.Fatal(err)
+	}
+	wg.Go(socks.Run)
+
 	wg.Wait()
 }
