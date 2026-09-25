@@ -9,18 +9,19 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[MsgError-0]
-	_ = x[MsgOk-1]
+	_ = x[MsgSuccess-1]
 	_ = x[MsgHostInit-2]
 	_ = x[MsgHostInitResp-3]
 	_ = x[MsgCtrlCh-4]
 	_ = x[MsgAppCh-5]
 	_ = x[MsgPing-6]
 	_ = x[MsgPong-7]
+	_ = x[MsgConnReq-8]
 }
 
-const _MsgType_name = "ErrorOkHostInitHostInitRespCtrlChAppChPingPong"
+const _MsgType_name = "ErrorSuccessHostInitHostInitRespCtrlChAppChPingPongConnReq"
 
-var _MsgType_index = [...]uint8{0, 5, 7, 15, 27, 33, 38, 42, 46}
+var _MsgType_index = [...]uint8{0, 5, 12, 20, 32, 38, 43, 47, 51, 58}
 
 func (i MsgType) String() string {
 	idx := int(i) - 0

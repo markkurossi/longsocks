@@ -10,7 +10,6 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"time"
@@ -116,11 +115,18 @@ func (ctrl *Control) handler(conn net.Conn) {
 			log.Printf("invalid %v message: %v", msgType, err)
 			return
 		}
-		cc := &ControlConnection{
-			ch:   make(chan int),
-			conn: conn,
+		NewHost(clientCert.DNSNames, conn)
+		log.Printf("hosts: %v", hosts)
+
+	case control.MsgAppCh:
+		var msg control.AppCh
+		_, err = longsocks.UnmarshalFrom(data, &msg)
+		if err != nil {
+			log.Printf("invalid %v message: %v", msgType, err)
+			return
 		}
-		cc.Run()
+		log.Printf("creating application connection for %v", msg.Cookie)
+		NewAppConn(conn, msg.Cookie)
 
 	default:
 		log.Printf("msg %v not implemented yet:\n%s", msgType, hex.Dump(data))
@@ -199,29 +205,38 @@ func (ctrl *Control) tokenHandler(conn net.Conn) error {
 	return err
 }
 
-type ControlConnection struct {
-	ch   chan int
-	conn net.Conn
+func (host *Host) control() {
+	log.Printf("control handler for host %v", host)
+	err := host.eventLoop()
+	log.Printf("%v: connection terminated: %v", host, err)
 }
 
-func (cc *ControlConnection) Run() {
-	err := cc.eventLoop()
-	if err != io.EOF {
-		log.Printf("connnection terminated: %v", err)
-	}
-}
-
-func (cc *ControlConnection) eventLoop() error {
+func (host *Host) eventLoop() error {
 	for {
 		select {
-		case i := <-cc.ch:
-			log.Printf("new job %v", i)
+		case cr := <-host.Ch:
+			cookie, err := NewAppConnReq(cr.Conn)
+			if err != nil {
+				log.Printf("failed to create connection request: %v", err)
+				cr.Conn.Close()
+				continue
+			}
+
+			t, data, err := control.RPC(host.conn, control.ConnReq{
+				IP:       []byte(cr.IP),
+				Hostname: cr.Hostname,
+				Port:     cr.Port,
+				Cookie:   cookie,
+			})
+			log.Printf("%v:\n%s", t, hex.Dump(data))
+			if err != nil {
+				log.Printf("failed to create application connection: %v", err)
+				cr.Conn.Close()
+			}
 
 		case <-time.After(5 * time.Second):
-			log.Printf("ping")
-
 			reqTime := time.Now().UnixMicro()
-			t, data, err := control.RPC(cc.conn, control.Ping{
+			t, data, err := control.RPC(host.conn, control.Ping{
 				Time: uint64(reqTime),
 			})
 			if err != nil {

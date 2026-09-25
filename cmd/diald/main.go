@@ -86,7 +86,7 @@ func run() error {
 			}
 		} else {
 			log.Printf("diald connected")
-			err = processControl(conn)
+			err = processControl(conn, dialer, addr)
 			if err != nil {
 				log.Printf("diald connection terminated: %v", err)
 			} else {

@@ -7,7 +7,7 @@
 package main
 
 import (
-	"encoding/hex"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -17,26 +17,18 @@ import (
 	"github.com/markkurossi/longsocks/control"
 )
 
-func processControl(conn net.Conn) error {
+func processControl(conn net.Conn, dialer *tls.Dialer, addr string) error {
 	defer conn.Close()
 
-	var hdr [5]byte
-	data, err := longsocks.Marshal(control.CtrlCh{
+	err := control.Send(conn, control.CtrlCh{
 		Msg: "Hello, longsocksd!",
 	})
 	if err != nil {
 		return err
 	}
-	hdr[0] = byte(control.MsgCtrlCh)
-	bo.PutUint32(hdr[1:], uint32(len(data)))
-	_, err = conn.Write(hdr[:])
-	if err != nil {
-		return err
-	}
-	_, err = conn.Write(data)
-	if err != nil {
-		return err
-	}
+
+	var hdr [5]byte
+	var data []byte
 
 	for {
 		_, err := conn.Read(hdr[:])
@@ -53,7 +45,6 @@ func processControl(conn net.Conn) error {
 		if err != nil {
 			return err
 		}
-		log.Printf("%v:\n%s", msgType, hex.Dump(data[:l]))
 
 		var response interface{}
 
@@ -62,6 +53,23 @@ func processControl(conn net.Conn) error {
 			response = control.Pong{
 				Time: uint64(time.Now().UnixMicro()),
 			}
+
+		case control.MsgConnReq:
+			var msg control.ConnReq
+			_, err = longsocks.UnmarshalFrom(data[:l], &msg)
+			if err != nil {
+				return err
+			}
+
+			err = appConnection(msg, dialer, addr)
+			if err != nil {
+				response = control.Error{
+					Error: err.Error(),
+				}
+			} else {
+				response = control.Success{}
+			}
+
 		default:
 			response = control.Error{
 				Error: fmt.Sprintf("unknown message %v", msgType),
@@ -72,4 +80,33 @@ func processControl(conn net.Conn) error {
 			return err
 		}
 	}
+}
+
+func appConnection(req control.ConnReq, dialer *tls.Dialer, addr string) error {
+	target := fmt.Sprintf(":%v", req.Port)
+	client, err := net.Dial("tcp", target)
+	if err != nil {
+		return err
+	}
+
+	server, err := dialer.Dial("tcp", addr)
+	if err != nil {
+		client.Close()
+		return err
+	}
+
+	log.Printf("app connection to %v", target)
+
+	err = control.Send(server, control.AppCh{
+		Cookie: req.Cookie,
+	})
+	if err != nil {
+		client.Close()
+		server.Close()
+		return err
+	}
+
+	go control.Relay(client, server)
+
+	return nil
 }

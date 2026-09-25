@@ -10,6 +10,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"runtime/debug"
 
 	"github.com/markkurossi/longsocks"
 )
@@ -37,13 +38,22 @@ func Send(conn net.Conn, req interface{}) error {
 	switch req.(type) {
 	case Error:
 		msgType = MsgError
+	case Success:
+		msgType = MsgSuccess
 	case HostInit:
 		msgType = MsgHostInit
+	case CtrlCh:
+		msgType = MsgCtrlCh
+	case AppCh:
+		msgType = MsgAppCh
 	case Ping:
 		msgType = MsgPing
 	case Pong:
 		msgType = MsgPong
+	case ConnReq:
+		msgType = MsgConnReq
 	default:
+		debug.PrintStack()
 		return fmt.Errorf("unknown request [%T]", req)
 	}
 
