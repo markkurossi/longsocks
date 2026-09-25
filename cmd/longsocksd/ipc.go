@@ -92,7 +92,7 @@ func (c *Connection) processMessages() error {
 		if n != l {
 			return fmt.Errorf("IPC stream out of sync: %v vs. %v", n, l)
 		}
-		fmt.Printf("args: %v\n", args)
+		log.Printf("args: %v", args)
 
 		var responseValues []string
 

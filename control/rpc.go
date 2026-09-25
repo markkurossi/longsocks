@@ -8,6 +8,7 @@ package control
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 	"runtime/debug"
@@ -84,6 +85,19 @@ func Recv(conn net.Conn) (MsgType, []byte, error) {
 	l := bo.Uint32(hdr[1:])
 	data := make([]byte, l)
 	_, err = conn.Read(data)
+	if err != nil {
+		return MsgError, nil, err
+	}
 
-	return MsgType(hdr[0]), data, err
+	t := MsgType(hdr[0])
+	if t == MsgError {
+		var msg Error
+		_, err = longsocks.UnmarshalFrom(data, &msg)
+		if err != nil {
+			return MsgError, nil, err
+		}
+		return MsgError, data, errors.New(msg.Error)
+	}
+
+	return t, data, nil
 }

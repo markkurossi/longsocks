@@ -103,6 +103,10 @@ func NewHost(names []string, conn net.Conn) {
 	defer m.Unlock()
 
 	for _, name := range names {
+		h, ok := hosts[name]
+		if !ok || h != host {
+			continue
+		}
 		delete(hosts, name)
 	}
 }
@@ -144,7 +148,7 @@ func NewAppConn(conn net.Conn, cookie string) {
 	m.Unlock()
 
 	if !ok {
-		log.Printf("unknown application connection %v", cookie)
+		log.Printf("unknown appcon %v", cookie)
 		return
 	}
 	delete(appConnReqs, cookie)
@@ -162,13 +166,12 @@ func NewAppConn(conn net.Conn, cookie string) {
 
 	_, err := appConn.Write(reply[:])
 	if err != nil {
-		log.Printf("sock5 reply error: %v", err)
+		log.Printf("SOCK5 reply error: %v", err)
 		appConn.Close()
 		conn.Close()
 		return
 	}
 
-	log.Printf("app: relay")
 	control.Relay(appConn, conn)
-	log.Printf("app: relayed")
+	log.Printf("appcon %v closed", cookie)
 }

@@ -97,7 +97,7 @@ func (ctrl *Control) handler(conn net.Conn) {
 
 	clientCert := state.VerifiedChains[0][0]
 
-	fmt.Printf("client for DNS names %v\n", clientCert.DNSNames)
+	log.Printf("client for DNS names %v", clientCert.DNSNames)
 
 	// Start processing commands from the authenticated control
 	// connection.
@@ -125,7 +125,7 @@ func (ctrl *Control) handler(conn net.Conn) {
 			log.Printf("invalid %v message: %v", msgType, err)
 			return
 		}
-		log.Printf("creating application connection for %v", msg.Cookie)
+		log.Printf("appcon %v", msg.Cookie)
 		NewAppConn(conn, msg.Cookie)
 
 	default:
@@ -174,17 +174,17 @@ func (ctrl *Control) tokenHandler(conn net.Conn) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("CSR: UUID=%s\n", csr.Subject.CommonName)
+		log.Printf("CSR: UUID=%s", csr.Subject.CommonName)
 		host, err := Registration(csr.Subject.CommonName)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("hostname: %v\n", host.Names)
+		log.Printf("hostname: %v", host.Names)
 		cert, err := identity.CreateHostCertificate(config, host.Names, csr)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("cert: issuer=%v, subject=%v\n", cert.Issuer, cert.Subject)
+		log.Printf("cert: issuer=%v, subject=%v", cert.Issuer, cert.Subject)
 		data, err = longsocks.Marshal(control.HostInitResp{
 			Cert: cert.Raw,
 		})
@@ -222,15 +222,14 @@ func (host *Host) eventLoop() error {
 				continue
 			}
 
-			t, data, err := control.RPC(host.conn, control.ConnReq{
+			_, _, err = control.RPC(host.conn, control.ConnReq{
 				IP:       []byte(cr.IP),
 				Hostname: cr.Hostname,
 				Port:     cr.Port,
 				Cookie:   cookie,
 			})
-			log.Printf("%v:\n%s", t, hex.Dump(data))
 			if err != nil {
-				log.Printf("failed to create application connection: %v", err)
+				log.Printf("failed to create appcon: %v", err)
 				cr.Conn.Close()
 			}
 
