@@ -34,35 +34,37 @@ type Error struct {
 type Success struct {
 }
 
-// HostInit defines host init message.
+// HostInit defines a host init message.
 type HostInit struct {
 	CSR []byte
 }
 
-// HostInitResp defines host init response.
+// HostInitResp defines a host init response.
 type HostInitResp struct {
 	Cert []byte
 }
 
-// CtrlCh defines control connection message.
+// CtrlCh defines a control connection message.
 type CtrlCh struct {
 	Msg string
 }
 
+// AppCh defines an application control message.
 type AppCh struct {
 	Cookie string
 }
 
-// Ping defines keepalive ping request.
+// Ping defines a keepalive ping request.
 type Ping struct {
 	Time uint64
 }
 
-// Pong defines ping response.
+// Pong defines a ping response.
 type Pong struct {
 	Time uint64
 }
 
+// ConnReq defines a connection request.
 type ConnReq struct {
 	IP       []byte
 	Hostname string

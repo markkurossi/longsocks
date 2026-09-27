@@ -12,10 +12,15 @@ import (
 	"sync"
 )
 
+// CloseWriter defines interface with CloseWrite function.
 type CloseWriter interface {
 	CloseWrite() error
 }
 
+// Relay connects connections c1 and c2 bidirectionally. It trigger
+// half-close on both directions if the connections implement
+// CloseWriter. The connections are closed once both directions have
+// been closed.
 func Relay(c1, c2 net.Conn) {
 	var wg sync.WaitGroup
 	wg.Add(2)
