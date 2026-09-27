@@ -55,7 +55,7 @@ func main() {
 	}
 	wg.Go(ctrl.Run)
 
-	socks, err := NewSocksListener()
+	socks, err := NewSocksServer()
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -116,7 +116,6 @@ func (ctrl *Control) handler(conn net.Conn) {
 			return
 		}
 		NewHost(clientCert.DNSNames, conn)
-		log.Printf("hosts: %v", hosts)
 
 	case control.MsgAppCh:
 		var msg control.AppCh
@@ -225,7 +224,7 @@ func (host *Host) eventLoop() error {
 			_, _, err = control.RPC(host.conn, control.ConnReq{
 				IP:       []byte(cr.IP),
 				Hostname: cr.Hostname,
-				Port:     cr.Port,
+				Port:     uint16(cr.Port),
 				Cookie:   cookie,
 			})
 			if err != nil {
