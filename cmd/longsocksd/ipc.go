@@ -18,11 +18,13 @@ import (
 	"github.com/markkurossi/longsocks"
 )
 
+// IPC defines the local control IPC server.
 type IPC struct {
 	listener net.Listener
 }
 
-func NewIPCListener(path string) (*IPC, error) {
+// NewIPCServer creates a new IPC server
+func NewIPCServer(path string) (*IPC, error) {
 	os.RemoveAll(path)
 	listener, err := net.Listen("unix", path)
 	if err != nil {
@@ -34,6 +36,7 @@ func NewIPCListener(path string) (*IPC, error) {
 	}, nil
 }
 
+// Run processes the control IPC connections.
 func (ipc *IPC) Run() {
 	for {
 		conn, err := ipc.listener.Accept()
@@ -50,6 +53,7 @@ func (ipc *IPC) Run() {
 	}
 }
 
+// Connection implements a control IPC connection.
 type Connection struct {
 	conn net.Conn
 }

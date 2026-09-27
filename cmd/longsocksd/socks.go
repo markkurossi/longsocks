@@ -12,6 +12,7 @@ import (
 	"github.com/markkurossi/longsocks/socks5"
 )
 
+// NewSocksServer creates a new SOCKS5 server.
 func NewSocksServer() (*socks5.Server, error) {
 	return socks5.NewServer(config.Longsocksd.Socks.Listen, socksHandler)
 }

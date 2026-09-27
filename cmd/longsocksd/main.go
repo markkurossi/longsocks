@@ -43,7 +43,7 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	ipc, err := NewIPCListener(longsocks.IPCListener)
+	ipc, err := NewIPCServer(longsocks.IPCListener)
 	if err != nil {
 		log.Fatal(err)
 	}
