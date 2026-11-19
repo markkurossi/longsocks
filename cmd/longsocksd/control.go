@@ -85,8 +85,8 @@ func (ctrl *Control) handler(conn net.Conn) {
 		log.Printf("client init with UUID")
 		err := ctrl.tokenHandler(conn)
 		if err != nil {
-			// XXX send error message here.
 			log.Printf("tokenHandler failed: %v", err)
+			ctrl.sendError(conn, err)
 		}
 		return
 	}
@@ -130,6 +130,25 @@ func (ctrl *Control) handler(conn net.Conn) {
 	default:
 		log.Printf("msg %v not implemented yet:\n%s", msgType, hex.Dump(data))
 	}
+}
+
+func (ctrl *Control) sendError(conn net.Conn, err error) error {
+	data, err := longsocks.Marshal(control.Error{
+		Error: err.Error(),
+	})
+	if err != nil {
+		return err
+	}
+
+	var hdr [5]byte
+	hdr[0] = byte(control.MsgError)
+	bo.PutUint32(hdr[1:], uint32(len(data)))
+	_, err = conn.Write(hdr[:])
+	if err != nil {
+		return err
+	}
+	_, err = conn.Write(data)
+	return err
 }
 
 func (ctrl *Control) tokenHandler(conn net.Conn) error {
@@ -191,6 +210,55 @@ func (ctrl *Control) tokenHandler(conn net.Conn) error {
 			return err
 		}
 		msgType = control.MsgHostInitResp
+
+	case control.MsgHostRemoteInit:
+		var msg control.HostInit
+		_, err = longsocks.UnmarshalFrom(data, &msg)
+		if err != nil {
+			return err
+		}
+		csr, err := x509.ParseCertificateRequest(msg.CSR)
+		if err != nil {
+			return err
+		}
+		err = csr.CheckSignature()
+		if err != nil {
+			return err
+		}
+		log.Printf("CSR: UUID=%s", csr.Subject.CommonName)
+		cookie, err := longsocks.ParseHex([]string{csr.Subject.CommonName})
+		if err != nil {
+			return err
+		}
+		if len(cookie) < 4 {
+			return fmt.Errorf("cookie too short")
+		}
+		host, err := CookieRegistration(cookie)
+		if err != nil {
+			return err
+		}
+		log.Printf("hostname: %v", host.Names)
+		cert, err := identity.CreateHostCertificate(config, host.Names, csr)
+		if err != nil {
+			return err
+		}
+		log.Printf("cert: issuer=%v, subject=%v", cert.Issuer, cert.Subject)
+
+		config, err := makeDialdConfig(host)
+		if err != nil {
+			return err
+		}
+		data, err = longsocks.Marshal(control.HostRemoteInitResp{
+			Config: config,
+			Cert:   cert.Raw,
+		})
+		if err != nil {
+			return err
+		}
+		msgType = control.MsgHostRemoteInitResp
+
+	default:
+		return fmt.Errorf("invalid message: %v", msgType)
 	}
 
 	hdr[0] = byte(msgType)
@@ -204,16 +272,16 @@ func (ctrl *Control) tokenHandler(conn net.Conn) error {
 	return err
 }
 
-func (host *Host) control() {
-	log.Printf("control handler for host %v", host)
-	err := host.eventLoop()
-	log.Printf("%v: connection terminated: %v", host, err)
+func (diald *Diald) control() {
+	log.Printf("control handler for host %v", diald)
+	err := diald.eventLoop()
+	log.Printf("%v: connection terminated: %v", diald, err)
 }
 
-func (host *Host) eventLoop() error {
+func (diald *Diald) eventLoop() error {
 	for {
 		select {
-		case cr := <-host.Ch:
+		case cr := <-diald.ch:
 			cookie, err := NewAppConnReq(cr.Conn)
 			if err != nil {
 				log.Printf("failed to create connection request: %v", err)
@@ -221,7 +289,7 @@ func (host *Host) eventLoop() error {
 				continue
 			}
 
-			_, _, err = control.RPC(host.conn, control.ConnReq{
+			_, _, err = control.RPC(diald.conn, control.ConnReq{
 				IP:       []byte(cr.IP),
 				Hostname: cr.Hostname,
 				Port:     uint16(cr.Port),
@@ -234,7 +302,7 @@ func (host *Host) eventLoop() error {
 
 		case <-time.After(5 * time.Second):
 			reqTime := time.Now().UnixMicro()
-			t, data, err := control.RPC(host.conn, control.Ping{
+			t, data, err := control.RPC(diald.conn, control.Ping{
 				Time: uint64(reqTime),
 			})
 			if err != nil {

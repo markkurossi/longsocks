@@ -43,6 +43,8 @@ func Send(conn net.Conn, req interface{}) error {
 		msgType = MsgSuccess
 	case HostInit:
 		msgType = MsgHostInit
+	case HostRemoteInit:
+		msgType = MsgHostRemoteInit
 	case CtrlCh:
 		msgType = MsgCtrlCh
 	case AppCh:

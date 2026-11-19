@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="10">
+  <meta name="theme-color" content="#0b1016">
+  <title>Longsocks — Statistics</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">LS</div>
+      <div>
+        <div class="title">Longsocks</div>
+        <div class="subtitle">SOCKS reverse proxy</div>
+      </div>
+    </div>
+    <div class="top-meta">Updated {{.GeneratedAt.Format "2006-01-02 15:04:05 MST"}}</div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div>
+        <h1>Infrastructure</h1>
+        <p>Registered dialds, tunnel health, and active connections.</p>
+      </div>
+      <div class="status-pill"><span></span> relay online</div>
+    </section>
+
+    <section class="cards">
+      <div class="card">
+        <div class="label">Dialds</div>
+        <div class="value">{{len .Dialds}}</div>
+        <div class="hint">registered</div>
+      </div>
+      <div class="card">
+        <div class="label">Active connections</div>
+        <div class="value">{{len .Connections}}</div>
+        <div class="hint">currently proxied</div>
+      </div>
+      <div class="card">
+        <div class="label">Healthy dialds</div>
+        <div class="value">{{.NumHealthy}} / {{len .Dialds}}</div>
+        <div class="hint">last heartbeat</div>
+      </div>
+      <div class="card">
+        <div class="label">Protocol</div>
+        <div class="value">TLS 1.3</div>
+        <div class="hint">relay transport</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Dialds</h2>
+          <p>Machines currently registered with the relay.</p>
+        </div>
+        <span class="count">{{len .Dialds}}</span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Machine</th>
+              <th>Health</th>
+              <th>Address</th>
+              <th>Version</th>
+              <th>Connected</th>
+              <th>Last seen</th>
+              <th>Connections</th>
+              <th>Traffic</th>
+            </tr>
+          </thead>
+          <tbody>
+          {{range .Dialds}}
+            <tr>
+              <td><strong>{{.ID}}</strong></td>
+              <td>
+                {{if .Healthy}}
+                  <span class="health good"><i></i> healthy</span>
+                {{else}}
+                  <span class="health bad"><i></i> stale</span>
+                {{end}}
+              </td>
+              <td class="mono">{{.Address}}</td>
+              <td class="mono">{{.Version}}</td>
+              <td>{{.ConnectedSince.Format "Jan 02, 15:04"}}</td>
+              <td>{{.LastSeen.Format "15:04:05"}}</td>
+              <td>{{.Connections}}</td>
+              <td>{{bytes .BytesIn}} ↓ / {{bytes .BytesOut}} ↑</td>
+            </tr>
+          {{end}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Active connections</h2>
+          <p>Current SOCKS / ProxyCommand sessions.</p>
+        </div>
+        <span class="count">{{len .Connections}}</span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Connection</th>
+              <th>Diald</th>
+              <th>Client</th>
+              <th>Destination</th>
+              <th>Started</th>
+              <th>Traffic</th>
+              <th>State</th>
+            </tr>
+          </thead>
+          <tbody>
+          {{range .Connections}}
+            <tr>
+              <td class="mono">{{.ID}}</td>
+              <td><strong>{{.Diald}}</strong></td>
+              <td class="mono">{{.Client}}</td>
+              <td class="mono">{{.Destination}}</td>
+              <td>{{.Started.Format "Jan 02, 15:04"}}</td>
+              <td>{{bytes .BytesIn}} ↓ / {{bytes .BytesOut}} ↑</td>
+              <td><span class="state">{{.State}}</span></td>
+            </tr>
+          {{end}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      Longsocks &middot; statistics are operational metadata; payload
+      data is never displayed.
+    </footer>
+  </main>
+</body>
+</html>

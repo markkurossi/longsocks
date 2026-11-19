@@ -7,14 +7,16 @@ package main
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
+	"strings"
 	"text/template"
 
-	"github.com/markkurossi/go-libs/uuid"
 	"github.com/markkurossi/longsocks"
 )
 
@@ -45,7 +47,7 @@ func (ipc *IPC) Run() {
 			continue
 		}
 
-		c := &Connection{
+		c := &IPCConnection{
 			conn: conn,
 		}
 
@@ -53,12 +55,12 @@ func (ipc *IPC) Run() {
 	}
 }
 
-// Connection implements a control IPC connection.
-type Connection struct {
+// IPCConnection implements a control IPC connection.
+type IPCConnection struct {
 	conn net.Conn
 }
 
-func (c *Connection) msgLoop() {
+func (c *IPCConnection) msgLoop() {
 	err := c.processMessages()
 	if err != nil {
 		log.Printf("IPC: %v", err)
@@ -66,7 +68,7 @@ func (c *Connection) msgLoop() {
 	c.conn.Close()
 }
 
-func (c *Connection) processMessages() error {
+func (c *IPCConnection) processMessages() error {
 	var buf [4]byte
 
 	var data []byte
@@ -140,10 +142,14 @@ ca = """
 certificate_file = "/usr/local/etc/longsocks.d/diald.crt"
 private_key_file = "/usr/local/etc/longsocks.d/diald.key"
 `
-	dialdTmp = template.Must(template.New("diald.conf").Parse(dialdConfig))
+	dialdTmpl = template.Must(template.New("diald.conf").Parse(dialdConfig))
 
-	hostInitCmd  = "diald init {{.ID}}"
+	hostInitCmd  = `diald init {{.ID}}`
 	hostInitTmpl = template.Must(template.New("diald.init").Parse(hostInitCmd))
+
+	hostRemoteInitCmd  = `diald remote-init {{.LongsocksdHostname}} {{.RemoteID}} {{.CertFingerprint}}`
+	hostRemoteInitTmpl = template.Must(template.New("diald.remote.init").
+				Parse(hostRemoteInitCmd))
 )
 
 func processCommand(args []string) ([]string, error) {
@@ -159,22 +165,45 @@ func processCommand(args []string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		id := host.ID
+		var remoteID string
+
+		idParts := strings.Split(id, "-")
+		if len(idParts) == 5 {
+			remoteID = idParts[0]
+		} else {
+			remoteID = id
+		}
+
+		// Compute CA certificate fingerprint.
+
+		key, err := longsocks.ParseHex(idParts[:1])
+		if err != nil {
+			return nil, fmt.Errorf("invalid registration ID: %w", err)
+		}
+		mac := hmac.New(sha256.New, key)
+		mac.Write(identity.Cert.Raw)
+		hmac := mac.Sum(nil)
+
+		fingerprint := fmt.Sprintf("%X", hmac[:4])
+
 		var values = struct {
 			Hostname           string
 			LongsocksdHostname string
 			LongsocksdPort     int
 			CACertificate      string
 			ID                 string
+			RemoteID           string
+			CertFingerprint    string
 		}{
-			Hostname:           fmt.Sprintf("%v", host.Names),
+			ID:                 id,
 			LongsocksdHostname: config.Longsocksd.Hostname,
-			LongsocksdPort:     config.Longsocksd.Port,
-			ID:                 host.ID.String(),
-			CACertificate:      string(identity.CertPEM()),
+			RemoteID:           remoteID,
+			CertFingerprint:    fingerprint,
 		}
 
-		var config bytes.Buffer
-		err = dialdTmp.Execute(&config, values)
+		config, err := makeDialdConfig(host)
 		if err != nil {
 			return nil, err
 		}
@@ -185,21 +214,60 @@ func processCommand(args []string) ([]string, error) {
 			return nil, err
 		}
 
-		return []string{config.String(), cmd.String()}, nil
+		var cmd2 bytes.Buffer
+		err = hostRemoteInitTmpl.Execute(&cmd2, values)
+		if err != nil {
+			return nil, err
+		}
+
+		return []string{
+			"host-init",
+			string(config),
+			cmd.String(),
+			cmd2.String(),
+		}, nil
 
 	case "ls", "list":
-		var result []string
+		result := []string{"list"}
 		for k, v := range hosts {
 			var id string
-			if uuid.Nil.Compare(v.ID) != 0 {
-				id = v.ID.String()
+			if len(v.ID) != 0 {
+				id = v.ID
 			}
 			value := fmt.Sprintf("%v|%v", k, id)
 			result = append(result, value)
 		}
+
+		for k, v := range registrations {
+			value := fmt.Sprintf("%v|%v", k, strings.Join(v.Names, ","))
+			result = append(result, value)
+		}
+
 		return result, nil
 
 	default:
 		return nil, fmt.Errorf("unknown command: %v", args[0])
 	}
+}
+
+func makeDialdConfig(diald *Diald) ([]byte, error) {
+	var values = struct {
+		Hostname           string
+		LongsocksdHostname string
+		LongsocksdPort     int
+		CACertificate      string
+	}{
+		Hostname:           fmt.Sprintf("%v", diald.Names),
+		LongsocksdHostname: config.Longsocksd.Hostname,
+		LongsocksdPort:     config.Longsocksd.Port,
+		CACertificate:      string(identity.CertPEM()),
+	}
+
+	var config bytes.Buffer
+	err := dialdTmpl.Execute(&config, values)
+	if err != nil {
+		return nil, err
+	}
+
+	return config.Bytes(), nil
 }

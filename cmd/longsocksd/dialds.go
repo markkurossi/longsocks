@@ -11,6 +11,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/markkurossi/go-libs/uuid"
 	"github.com/markkurossi/longsocks/control"
@@ -18,17 +19,25 @@ import (
 )
 
 var (
-	hosts         = make(map[string]*Host)
-	registrations = make(map[string]*Host)
+	hosts         = make(map[string]*Diald)
+	registrations = make(map[string]*Diald)
 	appConnReqs   = make(map[string]net.Conn)
 	m             sync.Mutex
 )
 
-type Host struct {
-	Names []string
-	ID    uuid.UUID
-	Ch    chan ConnReq
-	conn  net.Conn
+type Diald struct {
+	Names          []string
+	ID             string
+	Address        string
+	Version        string
+	ConnectedSince time.Time
+	LastSeen       time.Time
+	Healthy        bool
+	Connections    int
+	BytesIn        uint64
+	BytesOut       uint64
+	ch             chan ConnReq
+	conn           net.Conn
 }
 
 type ConnReq struct {
@@ -45,19 +54,19 @@ func (cr ConnReq) String() string {
 	return fmt.Sprintf("ConnReq:%v", cr.IP)
 }
 
-func (host *Host) String() string {
-	return fmt.Sprintf("%v", host.Names)
+func (diald *Diald) String() string {
+	return fmt.Sprintf("%v", diald.Names)
 }
 
-func NewRegistration(hostname string) (*Host, error) {
+func NewRegistration(hostname string) (*Diald, error) {
 	id, err := uuid.New()
 	if err != nil {
 		return nil, err
 	}
 
-	host := &Host{
-		Names: []string{strings.ToLower(hostname)},
-		ID:    id,
+	host := &Diald{
+		Names: []string{hostname},
+		ID:    id.String(),
 	}
 	idstr := id.String()
 
@@ -69,26 +78,42 @@ func NewRegistration(hostname string) (*Host, error) {
 	return host, nil
 }
 
-func Registration(id string) (*Host, error) {
-	id = strings.ToUpper(id)
+func Registration(id string) (*Diald, error) {
+	m.Lock()
+	defer m.Unlock()
+
+	diald, ok := registrations[id]
+	if !ok {
+		return nil, fmt.Errorf("unknown registration: %v", id)
+	}
+	diald.ID = ""
+	delete(registrations, id)
+
+	return diald, nil
+}
+
+func CookieRegistration(cookie []byte) (*Diald, error) {
+	prefix := fmt.Sprintf("%X", cookie)
 
 	m.Lock()
 	defer m.Unlock()
 
-	host, ok := registrations[id]
-	if !ok {
-		return nil, fmt.Errorf("unknown registration: %v", id)
+	for id, diald := range registrations {
+		if strings.HasPrefix(id, prefix) {
+			delete(registrations, diald.ID)
+			diald.ID = ""
+			return diald, nil
+		}
 	}
-	host.ID = uuid.Nil
-	delete(registrations, id)
 
-	return host, nil
+	return nil, fmt.Errorf("unknown cookie: %v", prefix)
 }
 
 func NewHost(names []string, conn net.Conn) {
-	host := &Host{
+	host := &Diald{
 		Names: names,
-		Ch:    make(chan ConnReq),
+		ID:    names[0],
+		ch:    make(chan ConnReq),
 		conn:  conn,
 	}
 
@@ -112,7 +137,7 @@ func NewHost(names []string, conn net.Conn) {
 	}
 }
 
-func LookupHost(ip net.IP, hostname string) (*Host, error) {
+func LookupHost(ip net.IP, hostname string) (*Diald, error) {
 	m.Lock()
 	defer m.Unlock()
 

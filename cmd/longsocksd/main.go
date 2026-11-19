@@ -61,5 +61,11 @@ func main() {
 	}
 	wg.Go(socks.Run)
 
+	httpd, err := NewHTTPD()
+	if err != nil {
+		log.Fatal(err)
+	}
+	wg.Go(httpd.Run)
+
 	wg.Wait()
 }

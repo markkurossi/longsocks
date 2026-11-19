@@ -19,6 +19,10 @@ import (
 	"github.com/markkurossi/longsocks"
 )
 
+const (
+	dialdConfig = "diald.toml"
+)
+
 var (
 	bo       = binary.BigEndian
 	config   *longsocks.Config
@@ -30,7 +34,7 @@ func main() {
 
 	flag.Parse()
 
-	config, err = longsocks.LoadConfig("diald.toml")
+	config, err = longsocks.LoadConfig(dialdConfig)
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
@@ -50,7 +54,7 @@ func main() {
 func run() error {
 	var err error
 
-	log.Printf("loading identity")
+	log.Printf("loading identity %v", config.Diald.PrivateKeyFile)
 	identity, err = longsocks.LoadIdentity(config.Diald.PrivateKeyFile,
 		config.Diald.CertificateFile)
 	if err != nil {

@@ -18,6 +18,8 @@ const (
 	MsgSuccess
 	MsgHostInit
 	MsgHostInitResp
+	MsgHostRemoteInit
+	MsgHostRemoteInitResp
 	MsgCtrlCh
 	MsgAppCh
 	MsgPing
@@ -42,6 +44,17 @@ type HostInit struct {
 // HostInitResp defines a host init response.
 type HostInitResp struct {
 	Cert []byte
+}
+
+// HostRemoteInit defines a host remote init message.
+type HostRemoteInit struct {
+	CSR []byte
+}
+
+// HostRemoteInitResp defines a host remote init response.
+type HostRemoteInitResp struct {
+	Config []byte
+	Cert   []byte
 }
 
 // CtrlCh defines a control connection message.

@@ -19,6 +19,7 @@ import (
 	"math/big"
 	"net"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -199,4 +200,25 @@ func LoadIdentity(privFile, certFile string) (*Identity, error) {
 		Priv: priv,
 		Cert: cert,
 	}, nil
+}
+
+func ParseHex(parts []string) ([]byte, error) {
+	var result []byte
+
+	for idx, part := range parts {
+		for len(part) > 0 {
+			if len(part) < 2 {
+				return nil, fmt.Errorf("invalid hex string %v", parts[idx])
+			}
+			u, err := strconv.ParseUint(part[:2], 16, 8)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, byte(u))
+
+			part = part[2:]
+		}
+	}
+
+	return result, nil
 }

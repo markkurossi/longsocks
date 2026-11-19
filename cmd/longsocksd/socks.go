@@ -29,7 +29,7 @@ func socksHandler(conn net.Conn, cmd socks5.Command, ip net.IP, hostname string,
 
 	log.Printf("host: %v", host)
 
-	host.Ch <- ConnReq{
+	host.ch <- ConnReq{
 		IP:       ip,
 		Hostname: hostname,
 		Port:     port,

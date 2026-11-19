@@ -12,16 +12,18 @@ func _() {
 	_ = x[MsgSuccess-1]
 	_ = x[MsgHostInit-2]
 	_ = x[MsgHostInitResp-3]
-	_ = x[MsgCtrlCh-4]
-	_ = x[MsgAppCh-5]
-	_ = x[MsgPing-6]
-	_ = x[MsgPong-7]
-	_ = x[MsgConnReq-8]
+	_ = x[MsgHostRemoteInit-4]
+	_ = x[MsgHostRemoteInitResp-5]
+	_ = x[MsgCtrlCh-6]
+	_ = x[MsgAppCh-7]
+	_ = x[MsgPing-8]
+	_ = x[MsgPong-9]
+	_ = x[MsgConnReq-10]
 }
 
-const _MsgType_name = "ErrorSuccessHostInitHostInitRespCtrlChAppChPingPongConnReq"
+const _MsgType_name = "ErrorSuccessHostInitHostInitRespHostRemoteInitHostRemoteInitRespCtrlChAppChPingPongConnReq"
 
-var _MsgType_index = [...]uint8{0, 5, 12, 20, 32, 38, 43, 47, 51, 58}
+var _MsgType_index = [...]uint8{0, 5, 12, 20, 32, 46, 64, 70, 75, 79, 83, 90}
 
 func (i MsgType) String() string {
 	idx := int(i) - 0
