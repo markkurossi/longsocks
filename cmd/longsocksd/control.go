@@ -1,3 +1,4 @@
+//
 // Copyright (c) 2026 Markku Rossi
 //
 // All rights reserved.
@@ -107,6 +108,8 @@ func (ctrl *Control) handler(conn net.Conn) {
 		log.Printf("failed to read message: %v", err)
 		return
 	}
+	log.Printf("%v:\n%s", msgType, hex.Dump(data))
+
 	switch msgType {
 	case control.MsgCtrlCh:
 		var msg control.CtrlCh
@@ -115,7 +118,8 @@ func (ctrl *Control) handler(conn net.Conn) {
 			log.Printf("invalid %v message: %v", msgType, err)
 			return
 		}
-		NewHost(clientCert.DNSNames, conn)
+		NewHost(clientCert.DNSNames, conn, msg.AgentInfo, msg.HostInfo,
+			msg.MemInfo, msg.SwapInfo)
 
 	case control.MsgAppCh:
 		var msg control.AppCh

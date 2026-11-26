@@ -44,6 +44,8 @@ func processCommands(args []string) error {
 }
 
 func cmdInit(commonName string) error {
+	loadConfig()
+
 	priv, err := longsocks.CreateKeypair()
 	if err != nil {
 		return err
@@ -124,9 +126,7 @@ func cmdRemoteInit(server, cookieStr, digestStr string) error {
 		// connecting via IP address.
 		// ServerName: config.Longsocksd.Hostname,
 	}
-	addr := fmt.Sprintf("%v:%v", config.Longsocksd.Hostname,
-		config.Longsocksd.Port)
-	conn, err := tls.Dial("tcp", addr, tlsConfig)
+	conn, err := tls.Dial("tcp", server, tlsConfig)
 	if err != nil {
 		return err
 	}
@@ -178,6 +178,10 @@ func initInstance(priv *ecdsa.PrivateKey, conn *tls.Conn,
 			return err
 		}
 		config, err = longsocks.Parse(msg.Config)
+		if err != nil {
+			return err
+		}
+		err = os.MkdirAll(longsocks.EtcDir, 0755)
 		if err != nil {
 			return err
 		}

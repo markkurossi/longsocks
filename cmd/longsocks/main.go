@@ -67,7 +67,7 @@ func daemonControl(args []string) error {
 	if n != l {
 		return fmt.Errorf("unmarshal: %v vs. %v", n, l)
 	}
-	if len(values) < 5 {
+	if len(values) < 2 {
 		return fmt.Errorf("unexpected result: %v", values)
 	}
 	switch values[0] {

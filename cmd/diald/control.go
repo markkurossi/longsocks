@@ -7,6 +7,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"log"
@@ -15,13 +16,36 @@ import (
 
 	"github.com/markkurossi/longsocks"
 	"github.com/markkurossi/longsocks/control"
+	"github.com/markkurossi/longsocks/sysinfo"
 )
 
 func processControl(conn net.Conn, dialer *tls.Dialer, addr string) error {
 	defer conn.Close()
 
-	err := control.Send(conn, control.CtrlCh{
-		Msg: "Hello, longsocksd!",
+	ctx := context.Background()
+	agentInfo, err := sysinfo.Agent(ctx)
+	if err != nil {
+		return err
+	}
+	hostInfo, err := sysinfo.Host(ctx)
+	if err != nil {
+		return err
+	}
+	memInfo, err := sysinfo.Memory(ctx)
+	if err != nil {
+		return err
+	}
+	swapInfo, err := sysinfo.Swap(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = control.Send(conn, control.CtrlCh{
+		Version:   0,
+		AgentInfo: *agentInfo,
+		HostInfo:  *hostInfo,
+		MemInfo:   *memInfo,
+		SwapInfo:  *swapInfo,
 	})
 	if err != nil {
 		return err

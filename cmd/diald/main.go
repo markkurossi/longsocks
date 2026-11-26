@@ -34,12 +34,8 @@ func main() {
 
 	flag.Parse()
 
-	config, err = longsocks.LoadConfig(dialdConfig)
-	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
-	}
-
 	if len(flag.Args()) == 0 {
+		loadConfig()
 		err = run()
 		log.Fatal(err)
 		log.Printf("diald terminated")
@@ -48,6 +44,14 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+	}
+}
+
+func loadConfig() {
+	var err error
+	config, err = longsocks.LoadConfig(dialdConfig)
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
 	}
 }
 

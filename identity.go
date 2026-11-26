@@ -127,6 +127,7 @@ func CreateIdentity(cfg *Config) (*Identity, error) {
 			"*.local",
 		},
 		IPAddresses: []net.IP{
+			net.ParseIP("192.168.42.254"),
 			net.ParseIP("127.0.0.1"),
 			net.ParseIP("::1"),
 		},

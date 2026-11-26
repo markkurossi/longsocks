@@ -1,3 +1,4 @@
+//
 // Copyright (c) 2026 Markku Rossi
 //
 // All rights reserved.
@@ -147,7 +148,7 @@ private_key_file = "/usr/local/etc/longsocks.d/diald.key"
 	hostInitCmd  = `diald init {{.ID}}`
 	hostInitTmpl = template.Must(template.New("diald.init").Parse(hostInitCmd))
 
-	hostRemoteInitCmd  = `diald remote-init {{.LongsocksdHostname}} {{.RemoteID}} {{.CertFingerprint}}`
+	hostRemoteInitCmd  = `diald remote-init {{.LongsocksdHostname}}:{{.LongsocksdPort}} {{.RemoteID}} {{.CertFingerprint}}`
 	hostRemoteInitTmpl = template.Must(template.New("diald.remote.init").
 				Parse(hostRemoteInitCmd))
 )
@@ -189,16 +190,15 @@ func processCommand(args []string) ([]string, error) {
 		fingerprint := fmt.Sprintf("%X", hmac[:4])
 
 		var values = struct {
-			Hostname           string
-			LongsocksdHostname string
-			LongsocksdPort     int
-			CACertificate      string
 			ID                 string
+			LongsocksdHostname string
 			RemoteID           string
 			CertFingerprint    string
+			LongsocksdPort     int
 		}{
 			ID:                 id,
 			LongsocksdHostname: config.Longsocksd.Hostname,
+			LongsocksdPort:     config.Longsocksd.Port,
 			RemoteID:           remoteID,
 			CertFingerprint:    fingerprint,
 		}

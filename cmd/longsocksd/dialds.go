@@ -1,3 +1,4 @@
+//
 // Copyright (c) 2026 Markku Rossi
 //
 // All rights reserved.
@@ -16,6 +17,7 @@ import (
 	"github.com/markkurossi/go-libs/uuid"
 	"github.com/markkurossi/longsocks/control"
 	"github.com/markkurossi/longsocks/socks5"
+	"github.com/markkurossi/longsocks/sysinfo"
 )
 
 var (
@@ -28,8 +30,10 @@ var (
 type Diald struct {
 	Names          []string
 	ID             string
-	Address        string
-	Version        string
+	AgentInfo      sysinfo.AgentInfo
+	HostInfo       sysinfo.HostInfo
+	MemInfo        sysinfo.MemInfo
+	SwapInfo       sysinfo.SwapInfo
 	ConnectedSince time.Time
 	LastSeen       time.Time
 	Healthy        bool
@@ -109,12 +113,19 @@ func CookieRegistration(cookie []byte) (*Diald, error) {
 	return nil, fmt.Errorf("unknown cookie: %v", prefix)
 }
 
-func NewHost(names []string, conn net.Conn) {
+func NewHost(names []string, conn net.Conn, agentInfo sysinfo.AgentInfo,
+	hostInfo sysinfo.HostInfo, memInfo sysinfo.MemInfo,
+	swapInfo sysinfo.SwapInfo) {
+
 	host := &Diald{
-		Names: names,
-		ID:    names[0],
-		ch:    make(chan ConnReq),
-		conn:  conn,
+		Names:     names,
+		ID:        names[0],
+		AgentInfo: agentInfo,
+		HostInfo:  hostInfo,
+		MemInfo:   memInfo,
+		SwapInfo:  swapInfo,
+		ch:        make(chan ConnReq),
+		conn:      conn,
 	}
 
 	m.Lock()

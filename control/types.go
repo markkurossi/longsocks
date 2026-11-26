@@ -7,6 +7,10 @@
 // Package control defines the control protocol messages.
 package control
 
+import (
+	"github.com/markkurossi/longsocks/sysinfo"
+)
+
 //go:generate stringer -type=MsgType -trimprefix=Msg
 
 // MsgType defines control messages.
@@ -59,7 +63,11 @@ type HostRemoteInitResp struct {
 
 // CtrlCh defines a control connection message.
 type CtrlCh struct {
-	Msg string
+	Version   uint8
+	AgentInfo sysinfo.AgentInfo
+	HostInfo  sysinfo.HostInfo
+	MemInfo   sysinfo.MemInfo
+	SwapInfo  sysinfo.SwapInfo
 }
 
 // AppCh defines an application control message.
