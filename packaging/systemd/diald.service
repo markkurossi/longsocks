@@ -1,0 +1,26 @@
+
+[Unit]
+Description=Longsocks dial daemon
+Documentation=https://github.com/markkurossi/longsocks
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=longsocks
+Group=longsocks
+ExecStart=/usr/sbin/diald
+Restart=on-failure
+RestartSec=5
+
+StateDirectory=longsocks
+StateDirectoryMode=0750
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/longsocks /etc/longsocks
+
+[Install]
+WantedBy=multi-user.target

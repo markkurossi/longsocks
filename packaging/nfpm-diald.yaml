@@ -1,0 +1,28 @@
+
+name: diald
+arch: amd64
+platform: linux
+version: ${VERSION}
+release: 1
+
+section: net
+priority: optional
+
+maintainer: Markku Rossi
+description: Longsocks reverse proxy dial daemon
+homepage: https://github.com/markkurossi/longsocks
+license: MIT
+
+contents:
+  - src: dist/diald
+    dst: /usr/sbin/diald
+    file_info:
+      mode: 0755
+
+  - src: packaging/systemd/diald.service
+    dst: /usr/lib/systemd/system/diald.service
+    file_info:
+      mode: 0644
+
+scripts:
+  postinstall: packaging/scripts/postinstall-diald.sh

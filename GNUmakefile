@@ -1,7 +1,9 @@
 VERSION ?= 0.1.0
 COMMIT := $(shell git rev-parse HEAD)
 
-.PHONY: package
+all: package package-diald
+
+.PHONY: package package-diald
 
 package:
 	rm -rf dist
@@ -20,4 +22,15 @@ package:
 	VERSION=$(VERSION) nfpm pkg \
 		--packager deb \
 		--config packaging/nfpm.yaml \
+		--target dist/
+
+package-diald:
+	mkdir -p dist
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+		-trimpath \
+		-ldflags "-s -w -X main.version=$(VERSION) -X main.gitCommit=$(COMMIT)" \
+		-o dist/diald ./cmd/diald
+	VERSION=$(VERSION) nfpm pkg \
+		--packager deb \
+		--config packaging/nfpm-diald.yaml \
 		--target dist/

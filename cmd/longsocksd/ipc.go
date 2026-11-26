@@ -140,8 +140,8 @@ port = {{.LongsocksdPort}}
 ca = """
 {{.CACertificate}}"""
 
-certificate_file = "/usr/local/etc/longsocks.d/diald.crt"
-private_key_file = "/usr/local/etc/longsocks.d/diald.key"
+certificate_file = "/var/lib/longsocks/diald.crt"
+private_key_file = "/var/lib/longsocks/diald.key"
 `
 	dialdTmpl = template.Must(template.New("diald.conf").Parse(dialdConfig))
 
