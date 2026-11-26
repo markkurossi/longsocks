@@ -84,6 +84,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	log.Printf("identity %v", identity.Cert.DNSNames)
 	rootCAs, err := getCACertificates()
 	if err != nil {
 		return err
