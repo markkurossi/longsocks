@@ -17,18 +17,20 @@ import (
 
 func main() {
 	daemon := flag.Bool("d", false, "daemon control")
+	socket := flag.String("socket", longsocks.IPCListener,
+		"control socket path")
 	flag.Parse()
 
 	if *daemon {
-		err := daemonControl(flag.Args())
+		err := daemonControl(*socket, flag.Args())
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 }
 
-func daemonControl(args []string) error {
-	conn, err := net.Dial("unix", longsocks.IPCListener)
+func daemonControl(socket string, args []string) error {
+	conn, err := net.Dial("unix", socket)
 	if err != nil {
 		return err
 	}

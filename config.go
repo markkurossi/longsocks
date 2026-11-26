@@ -10,6 +10,7 @@ package longsocks
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -52,6 +53,11 @@ func Parse(data []byte) (*Config, error) {
 
 	err := decoder.Decode(&cfg)
 	if err != nil {
+		var strictErr *toml.StrictMissingError
+		if errors.As(err, &strictErr) {
+			fmt.Println(strictErr.String())
+		}
+		fmt.Printf("err: %#v\n", err)
 		return nil, fmt.Errorf("parse error: %w", err)
 	}
 
@@ -70,5 +76,10 @@ func LoadConfig(name string) (*Config, error) {
 		return nil, err
 	}
 
-	return Parse(data)
+	cfg, err := Parse(data)
+	if err != nil {
+		return nil, fmt.Errorf("%v: %w", name, err)
+	}
+
+	return cfg, nil
 }

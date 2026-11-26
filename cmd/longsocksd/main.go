@@ -8,8 +8,10 @@ package main
 
 import (
 	"encoding/binary"
+	"flag"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/markkurossi/longsocks"
@@ -19,14 +21,38 @@ var (
 	bo       = binary.BigEndian
 	config   *longsocks.Config
 	identity *longsocks.Identity
+
+	version   = "dev"
+	gitCommit = "unknown"
 )
 
 func main() {
+	cfgDir := flag.String("config", longsocks.EtcDir, "config file directory")
+	stateDir := flag.String("state-dir", longsocks.VarLibDir,
+		"directory for persistent state")
+	socket := flag.String("socket", longsocks.IPCListener,
+		"control socket path")
+	flag.Parse()
+
+	longsocks.Dirs.Etc = *cfgDir
+
+	var newStateDir bool
+	if *stateDir != longsocks.VarLibDir {
+		newStateDir = true
+		longsocks.Dirs.VarLib = *stateDir
+	}
+
 	var err error
 
 	config, err = longsocks.LoadConfig("longsocksd.toml")
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
+	}
+	if newStateDir {
+		config.Longsocksd.PrivateKeyFile =
+			filepath.Join(*stateDir, longsocks.PrivateKeyName)
+		config.Longsocksd.CertificateFile =
+			filepath.Join(*stateDir, longsocks.CertificateName)
 	}
 
 	identity, err = longsocks.LoadIdentity(config.Longsocksd.PrivateKeyFile,
@@ -43,7 +69,7 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	ipc, err := NewIPCServer(longsocks.IPCListener)
+	ipc, err := NewIPCServer(*socket)
 	if err != nil {
 		log.Fatal(err)
 	}

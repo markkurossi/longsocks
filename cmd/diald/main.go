@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"path/filepath"
 	"time"
 
 	"github.com/markkurossi/longsocks"
@@ -24,15 +25,28 @@ const (
 )
 
 var (
-	bo       = binary.BigEndian
-	config   *longsocks.Config
-	identity *longsocks.Identity
+	bo          = binary.BigEndian
+	newStateDir bool
+	config      *longsocks.Config
+	identity    *longsocks.Identity
+
+	version   = "dev"
+	gitCommit = "unknown"
 )
 
 func main() {
-	var err error
-
+	cfgDir := flag.String("config", longsocks.EtcDir, "config file directory")
+	stateDir := flag.String("state-dir", longsocks.VarLibDir,
+		"directory for persistent state")
 	flag.Parse()
+
+	longsocks.Dirs.Etc = *cfgDir
+	if *stateDir != longsocks.VarLibDir {
+		newStateDir = true
+		longsocks.Dirs.VarLib = *stateDir
+	}
+
+	var err error
 
 	if len(flag.Args()) == 0 {
 		loadConfig()
@@ -52,6 +66,12 @@ func loadConfig() {
 	config, err = longsocks.LoadConfig(dialdConfig)
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
+	}
+	if newStateDir {
+		config.Diald.PrivateKeyFile =
+			filepath.Join(longsocks.Dirs.VarLib, longsocks.DialdPrivateKeyName)
+		config.Diald.CertificateFile =
+			filepath.Join(longsocks.Dirs.VarLib, longsocks.DialdCertificateName)
 	}
 }
 

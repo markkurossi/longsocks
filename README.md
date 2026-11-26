@@ -105,3 +105,13 @@ Run this command at host to init diald:
 diald init 91EE56B7-9EFF-4EC5-AD33-EA61E9339095
 ----------------------------------------------------------------------
 ```
+
+# Build
+
+``` shell
+
+go build \
+    -ldflags "-X main.version=$(git describe --tags --always --dirty) \
+              -X main.gitCommit=$(git rev-parse HEAD)" \
+    -o diald ./cmd/diald
+```

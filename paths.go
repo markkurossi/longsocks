@@ -11,11 +11,30 @@ import (
 )
 
 const (
-	EtcDir = "/usr/local/etc/longsocks.d"
+	EtcDir    = "/etc/longsocks"
+	VarLibDir = "/var/lib/longsocks"
+	RunDir    = "/run/longsocks"
 
-	IPCListener = "/tmp/longsocks.sock"
+	IPCListener = RunDir + "/longsocks.sock"
+
+	PrivateKeyName       = "proxy.key"
+	CertificateName      = "proxy.crt"
+	DialdPrivateKeyName  = "diald.key"
+	DialdCertificateName = "diald.crt"
 )
 
+type ConfigDirs struct {
+	Etc    string
+	VarLib string
+	Run    string
+}
+
+var Dirs = &ConfigDirs{
+	Etc:    EtcDir,
+	VarLib: VarLibDir,
+	Run:    RunDir,
+}
+
 func ConfigFile(file string) string {
-	return filepath.Join(EtcDir, file)
+	return filepath.Join(Dirs.Etc, file)
 }
