@@ -1,0 +1,22 @@
+[longsocksd]
+
+hostname = "longsocks.example.com"
+port = 8103
+
+certificate_file = "/var/lib/longsocks/proxy.crt"
+private_key_file = "/var/lib/longsocks/proxy.key"
+
+[longsocksd.certificate]
+
+country = ["FI"]
+organization = ["Example"]
+common_name = "Longsocks"
+host_common_name = "Longsocks Host"
+
+[longsocksd.socks]
+
+listen = ":1080"
+
+[longsocksd.http]
+
+listen = ":8080"

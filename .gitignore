@@ -34,3 +34,5 @@ go.work.sum
 cmd/diald/diald
 cmd/longsocks/longsocks
 cmd/longsocksd/longsocksd
+
+dist

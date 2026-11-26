@@ -1,0 +1,40 @@
+name: longsocksd
+arch: amd64
+platform: linux
+version: ${VERSION}
+release: 2
+
+section: net
+priority: optional
+
+maintainer: Markku Rossi
+description: SOCKS reverse proxy through long-lived outbound tunnels
+homepage: https://github.com/markkurossi/longsocks
+license: MIT
+
+contents:
+  - src: dist/longsocksd
+    dst: /usr/sbin/longsocksd
+    file_info:
+      mode: 0755
+
+  - src: dist/longsocks
+    dst: /usr/bin/longsocks
+    file_info:
+      mode: 0755
+
+  - src: packaging/systemd/longsocksd.service
+    dst: /usr/lib/systemd/system/longsocksd.service
+    file_info:
+      mode: 0644
+
+  - src: packaging/longsocksd.toml
+    dst: /etc/longsocks/longsocksd.toml
+    type: config
+    file_info:
+      owner: root
+      group: longsocks
+      mode: 0640
+
+scripts:
+  postinstall: packaging/scripts/postinstall.sh
