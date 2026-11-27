@@ -304,7 +304,7 @@ func (diald *Diald) eventLoop() error {
 				cr.Conn.Close()
 			}
 
-		case <-time.After(5 * time.Second):
+		case <-time.After(30 * time.Second):
 			reqTime := time.Now().UnixMicro()
 			t, data, err := control.RPC(diald.conn, control.Ping{
 				Time: uint64(reqTime),
@@ -313,7 +313,8 @@ func (diald *Diald) eventLoop() error {
 				return err
 			}
 			respTime := time.Now().UnixMicro()
-			expectedTime := reqTime + (respTime-reqTime)/2
+			rtt := respTime - reqTime
+			expectedTime := reqTime + rtt/2
 
 			switch t {
 			case control.MsgPong:
@@ -323,7 +324,8 @@ func (diald *Diald) eventLoop() error {
 					return err
 				}
 				d := int64(msg.Time) - expectedTime
-				log.Printf("keepalive: delta=%v", time.Duration(d*1000))
+				log.Printf("keepalive: rtt=%v, delta=%v",
+					time.Duration(rtt*1000), time.Duration(d*1000))
 
 			default:
 				log.Printf("%v:\n%s", t, hex.Dump(data))
