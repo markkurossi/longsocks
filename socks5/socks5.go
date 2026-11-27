@@ -7,6 +7,7 @@
 package socks5
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -114,6 +115,11 @@ func (server *Server) handleConn(conn net.Conn) {
 	}
 }
 
+var (
+	HttpGET     = []byte("GET ")
+	HttpVersion = []byte(" HTTP/")
+)
+
 func (server *Server) handle(conn net.Conn) error {
 	var hdr [1 + 1 + 255]byte
 
@@ -121,12 +127,21 @@ func (server *Server) handle(conn net.Conn) error {
 	if err != nil {
 		return err
 	}
-	if n < 3 || n < int(2+hdr[1]) {
-		return fmt.Errorf("truncated header: len=%v", n)
+	if n == 0 {
+		return io.EOF
 	}
 	version := hdr[0]
 	if version != 0x05 {
+		// Check HTTP requests.
+		if bytes.HasPrefix(hdr[:n], HttpGET) ||
+			bytes.Contains(hdr[:n], HttpVersion) {
+			return fmt.Errorf("HTTP request: %+q", hdr[:n])
+		}
+
 		return fmt.Errorf("unsupported SOCKS version %v", version)
+	}
+	if n < 3 || n < int(2+hdr[1]) {
+		return fmt.Errorf("truncated SOCKS5 header: len=%v", n)
 	}
 
 	var methods []string
