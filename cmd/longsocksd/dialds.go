@@ -155,12 +155,12 @@ func LookupHost(ip net.IP, hostname string) (*Diald, error) {
 	if len(hostname) > 0 {
 		host, ok := hosts[hostname]
 		if !ok {
-			return nil, fmt.Errorf("unknown host: %v", hostname)
+			return nil, fmt.Errorf("hostname %v is not registered", hostname)
 		}
 		return host, nil
 	}
 
-	return nil, fmt.Errorf("unknown host: %v", ip)
+	return nil, fmt.Errorf("address %v is not registered", ip)
 }
 
 func NewAppConnReq(conn net.Conn) (string, error) {

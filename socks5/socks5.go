@@ -108,7 +108,8 @@ func (server *Server) Run() {
 func (server *Server) handleConn(conn net.Conn) {
 	err := server.handle(conn)
 	if err != nil {
-		log.Printf("handler failed: %v", err)
+		log.Printf("SOCKS connection from %v failed: %v",
+			conn.RemoteAddr(), err)
 		conn.Close()
 	}
 }
@@ -124,6 +125,9 @@ func (server *Server) handle(conn net.Conn) error {
 		return fmt.Errorf("truncated header: len=%v", n)
 	}
 	version := hdr[0]
+	if version != 0x05 {
+		return fmt.Errorf("unsupported SOCKS version %v", version)
+	}
 
 	var methods []string
 	selected := MethodNoAcceptableMethods
@@ -187,8 +191,6 @@ func (server *Server) handle(conn net.Conn) error {
 	}
 
 	port := int(binary.BigEndian.Uint16(hdr[5+l-2:]))
-
-	log.Printf("%v: ip=%v, hostname=%v, port=%d", cmd, ip, hostname, port)
 
 	return server.handler(conn, cmd, ip, hostname, port)
 }
