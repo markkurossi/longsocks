@@ -4,6 +4,7 @@
 // All rights reserved.
 //
 
+// Package sysinfo provides operating system information.
 package sysinfo
 
 import (

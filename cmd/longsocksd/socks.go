@@ -7,6 +7,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 
@@ -23,14 +24,18 @@ func socksHandler(conn net.Conn, cmd socks5.Command, ip net.IP, hostname string,
 
 	log.Printf("%v: ip=%v, hostname=%v, port=%d", cmd, ip, hostname, port)
 
-	host, err := LookupHost(ip, hostname)
+	diald, err := LookupHost(ip, hostname)
 	if err != nil {
 		return err
 	}
+	if !diald.AllowedPorts[port] {
+		socks5.Response(conn, socks5.ReplyConnectionNotAllowed, nil, "", 0)
+		return fmt.Errorf("%v: port %v not allowed", diald, port)
+	}
 
-	log.Printf("host: %v", host)
+	log.Printf("diald: %v", diald)
 
-	host.ch <- ConnReq{
+	diald.ch <- ConnReq{
 		IP:       ip,
 		Hostname: hostname,
 		Port:     port,

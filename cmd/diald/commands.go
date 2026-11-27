@@ -40,7 +40,6 @@ func processCommands(args []string) error {
 	default:
 		return fmt.Errorf("unknown command: %v", args[0])
 	}
-	return nil
 }
 
 func cmdInit(commonName string) error {
@@ -116,7 +115,7 @@ func cmdRemoteInit(server, cookieStr, digestStr string) error {
 				l = len(hmac)
 			}
 
-			if bytes.Compare(digest[:l], hmac[:l]) != 0 {
+			if !bytes.Equal(digest[:l], hmac[:l]) {
 				return fmt.Errorf("certificate digest mismatch")
 			}
 
@@ -196,8 +195,6 @@ func initInstance(priv *ecdsa.PrivateKey, conn *tls.Conn,
 	default:
 		return fmt.Errorf("invalid response: %v", msgType)
 	}
-
-	return nil
 }
 
 func saveInit(priv *ecdsa.PrivateKey, cert []byte) error {

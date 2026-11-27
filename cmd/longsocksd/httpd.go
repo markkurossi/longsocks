@@ -97,13 +97,13 @@ func getStats() *StatsPage {
 	// Replace these demo values with your actual Longsocks registry/metrics.
 	now := time.Now()
 
-	fmt.Printf("hosts: %v\n", hosts)
+	fmt.Printf("dialds: %v\n", dialds)
 
 	var dialds []*Diald
 	var numHealthy int
 
 	m.Lock()
-	for _, diald := range hosts {
+	for _, diald := range dialds {
 		dialds = append(dialds, diald)
 		if diald.Healthy {
 			numHealthy++

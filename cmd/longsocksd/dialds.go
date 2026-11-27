@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	hosts         = make(map[string]*Diald)
+	dialds        = make(map[string]*Diald)
 	registrations = make(map[string]*Diald)
 	appConnReqs   = make(map[string]net.Conn)
 	m             sync.Mutex
@@ -30,6 +30,7 @@ var (
 type Diald struct {
 	Names          []string
 	ID             string
+	AllowedPorts   map[int]bool
 	AgentInfo      sysinfo.AgentInfo
 	HostInfo       sysinfo.HostInfo
 	MemInfo        sysinfo.MemInfo
@@ -59,7 +60,15 @@ func (cr ConnReq) String() string {
 }
 
 func (diald *Diald) String() string {
-	return fmt.Sprintf("%v", diald.Names)
+	return fmt.Sprintf("%v", diald.Names[0])
+}
+
+func (diald *Diald) Seen() {
+	diald.LastSeen = time.Now()
+}
+
+func (diald *Diald) SetHealthy(healthy bool) {
+	diald.Healthy = healthy
 }
 
 func NewRegistration(hostname string) (*Diald, error) {
@@ -113,38 +122,47 @@ func CookieRegistration(cookie []byte) (*Diald, error) {
 	return nil, fmt.Errorf("unknown cookie: %v", prefix)
 }
 
-func NewHost(names []string, conn net.Conn, agentInfo sysinfo.AgentInfo,
-	hostInfo sysinfo.HostInfo, memInfo sysinfo.MemInfo,
-	swapInfo sysinfo.SwapInfo) {
+func NewHost(names []string, conn net.Conn, allowedPorts []int,
+	agentInfo sysinfo.AgentInfo, hostInfo sysinfo.HostInfo,
+	memInfo sysinfo.MemInfo, swapInfo sysinfo.SwapInfo) {
 
-	host := &Diald{
-		Names:     names,
-		ID:        names[0],
-		AgentInfo: agentInfo,
-		HostInfo:  hostInfo,
-		MemInfo:   memInfo,
-		SwapInfo:  swapInfo,
-		ch:        make(chan ConnReq),
-		conn:      conn,
+	now := time.Now()
+
+	diald := &Diald{
+		Names:          names,
+		ID:             names[0],
+		AllowedPorts:   make(map[int]bool),
+		AgentInfo:      agentInfo,
+		HostInfo:       hostInfo,
+		MemInfo:        memInfo,
+		SwapInfo:       swapInfo,
+		ConnectedSince: now,
+		LastSeen:       now,
+		ch:             make(chan ConnReq),
+		conn:           conn,
+	}
+
+	for _, port := range allowedPorts {
+		diald.AllowedPorts[port] = true
 	}
 
 	m.Lock()
 	for _, name := range names {
-		hosts[name] = host
+		dialds[name] = diald
 	}
 	m.Unlock()
 
-	host.control()
+	diald.control()
 
 	m.Lock()
 	defer m.Unlock()
 
 	for _, name := range names {
-		h, ok := hosts[name]
-		if !ok || h != host {
+		d, ok := dialds[name]
+		if !ok || d != diald {
 			continue
 		}
-		delete(hosts, name)
+		delete(dialds, name)
 	}
 }
 
@@ -153,11 +171,11 @@ func LookupHost(ip net.IP, hostname string) (*Diald, error) {
 	defer m.Unlock()
 
 	if len(hostname) > 0 {
-		host, ok := hosts[hostname]
+		diald, ok := dialds[hostname]
 		if !ok {
 			return nil, fmt.Errorf("hostname %v is not registered", hostname)
 		}
-		return host, nil
+		return diald, nil
 	}
 
 	return nil, fmt.Errorf("address %v is not registered", ip)

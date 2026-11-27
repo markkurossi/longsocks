@@ -116,8 +116,8 @@ func (server *Server) handleConn(conn net.Conn) {
 }
 
 var (
-	HttpGET     = []byte("GET ")
-	HttpVersion = []byte(" HTTP/")
+	HTTPGET     = []byte("GET ")
+	HTTPVersion = []byte(" HTTP/")
 )
 
 func (server *Server) handle(conn net.Conn) error {
@@ -133,8 +133,8 @@ func (server *Server) handle(conn net.Conn) error {
 	version := hdr[0]
 	if version != 0x05 {
 		// Check HTTP requests.
-		if bytes.HasPrefix(hdr[:n], HttpGET) ||
-			bytes.Contains(hdr[:n], HttpVersion) {
+		if bytes.HasPrefix(hdr[:n], HTTPGET) ||
+			bytes.Contains(hdr[:n], HTTPVersion) {
 			return fmt.Errorf("HTTP request: %+q", hdr[:n])
 		}
 

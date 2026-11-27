@@ -63,11 +63,12 @@ type HostRemoteInitResp struct {
 
 // CtrlCh defines a control connection message.
 type CtrlCh struct {
-	Version   uint8
-	AgentInfo sysinfo.AgentInfo
-	HostInfo  sysinfo.HostInfo
-	MemInfo   sysinfo.MemInfo
-	SwapInfo  sysinfo.SwapInfo
+	Version      uint8
+	AllowedPorts []int
+	AgentInfo    sysinfo.AgentInfo
+	HostInfo     sysinfo.HostInfo
+	MemInfo      sysinfo.MemInfo
+	SwapInfo     sysinfo.SwapInfo
 }
 
 // AppCh defines an application control message.
@@ -82,7 +83,10 @@ type Ping struct {
 
 // Pong defines a ping response.
 type Pong struct {
-	Time uint64
+	Time     uint64
+	Elapsed  uint64
+	MemInfo  sysinfo.MemInfo
+	SwapInfo sysinfo.SwapInfo
 }
 
 // ConnReq defines a connection request.

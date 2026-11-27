@@ -27,6 +27,8 @@ var (
 )
 
 func main() {
+	log.SetFlags(0)
+
 	cfgDir := flag.String("config", longsocks.EtcDir, "config file directory")
 	stateDir := flag.String("state-dir", longsocks.VarLibDir,
 		"directory for persistent state")

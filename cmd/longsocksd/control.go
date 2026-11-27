@@ -108,7 +108,6 @@ func (ctrl *Control) handler(conn net.Conn) {
 		log.Printf("failed to read message: %v", err)
 		return
 	}
-	log.Printf("%v:\n%s", msgType, hex.Dump(data))
 
 	switch msgType {
 	case control.MsgCtrlCh:
@@ -118,8 +117,8 @@ func (ctrl *Control) handler(conn net.Conn) {
 			log.Printf("invalid %v message: %v", msgType, err)
 			return
 		}
-		NewHost(clientCert.DNSNames, conn, msg.AgentInfo, msg.HostInfo,
-			msg.MemInfo, msg.SwapInfo)
+		NewHost(clientCert.DNSNames, conn, msg.AllowedPorts, msg.AgentInfo,
+			msg.HostInfo, msg.MemInfo, msg.SwapInfo)
 
 	case control.MsgAppCh:
 		var msg control.AppCh
@@ -299,9 +298,12 @@ func (diald *Diald) eventLoop() error {
 				Port:     uint16(cr.Port),
 				Cookie:   cookie,
 			})
+			diald.SetHealthy(err == nil)
 			if err != nil {
 				log.Printf("failed to create appcon: %v", err)
 				cr.Conn.Close()
+			} else {
+				diald.Seen()
 			}
 
 		case <-time.After(30 * time.Second):
@@ -309,6 +311,7 @@ func (diald *Diald) eventLoop() error {
 			t, data, err := control.RPC(diald.conn, control.Ping{
 				Time: uint64(reqTime),
 			})
+			diald.SetHealthy(err == nil)
 			if err != nil {
 				return err
 			}
@@ -316,16 +319,29 @@ func (diald *Diald) eventLoop() error {
 			rtt := respTime - reqTime
 			expectedTime := reqTime + rtt/2
 
+			diald.Seen()
+
 			switch t {
 			case control.MsgPong:
 				var msg control.Pong
 				_, err := longsocks.UnmarshalFrom(data, &msg)
 				if err != nil {
-					return err
+					diald.SetHealthy(false)
+					log.Printf("failed to decode pong: %v\n%s",
+						err, hex.Dump(data))
 				}
+
 				d := int64(msg.Time) - expectedTime
-				log.Printf("keepalive: rtt=%v, delta=%v",
-					time.Duration(rtt*1000), time.Duration(d*1000))
+				log.Printf("%v keepalive: rtt=%v, delta=%v",
+					diald, time.Duration(rtt*1000), time.Duration(d*1000))
+
+				diald.MemInfo = msg.MemInfo
+				diald.SwapInfo = msg.SwapInfo
+
+				log.Printf("%v mem: %v/%v, swap: %v/%v",
+					diald,
+					msg.MemInfo.Available, msg.MemInfo.Total,
+					msg.SwapInfo.Free, msg.SwapInfo.Total)
 
 			default:
 				log.Printf("%v:\n%s", t, hex.Dump(data))

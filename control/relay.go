@@ -21,14 +21,16 @@ type CloseWriter interface {
 // half-close on both directions if the connections implement
 // CloseWriter. The connections are closed once both directions have
 // been closed.
-func Relay(c1, c2 net.Conn) {
+func Relay(c1, c2 net.Conn) (int64, int64) {
 	var wg sync.WaitGroup
 	wg.Add(2)
+
+	var c12, c21 int64
 
 	// Stream c1 -> c2.
 	go func() {
 		defer wg.Done()
-		io.Copy(c2, c1)
+		c12, _ = io.Copy(c2, c1)
 
 		// Signal to c2 that no more data is coming from c1.
 		if tc, ok := c2.(CloseWriter); ok {
@@ -39,7 +41,7 @@ func Relay(c1, c2 net.Conn) {
 	// Stream c2 -> c1.
 	go func() {
 		defer wg.Done()
-		io.Copy(c1, c2)
+		c21, _ = io.Copy(c1, c2)
 
 		// Signal to c1 that no more data is coming from c2.
 		if tc, ok := c1.(CloseWriter); ok {
@@ -51,4 +53,6 @@ func Relay(c1, c2 net.Conn) {
 
 	c1.Close()
 	c2.Close()
+
+	return c12, c21
 }

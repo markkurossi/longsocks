@@ -41,11 +41,12 @@ func processControl(conn net.Conn, dialer *tls.Dialer, addr string) error {
 	}
 
 	err = control.Send(conn, control.CtrlCh{
-		Version:   0,
-		AgentInfo: *agentInfo,
-		HostInfo:  *hostInfo,
-		MemInfo:   *memInfo,
-		SwapInfo:  *swapInfo,
+		Version:      0,
+		AllowedPorts: config.Diald.AllowedPorts,
+		AgentInfo:    *agentInfo,
+		HostInfo:     *hostInfo,
+		MemInfo:      *memInfo,
+		SwapInfo:     *swapInfo,
 	})
 	if err != nil {
 		return err
@@ -74,9 +75,25 @@ func processControl(conn net.Conn, dialer *tls.Dialer, addr string) error {
 
 		switch msgType {
 		case control.MsgPing:
-			response = control.Pong{
-				Time: uint64(time.Now().UnixMicro()),
+			reqTime := time.Now().UnixMicro()
+
+			memInfo, _ := sysinfo.Memory(ctx)
+			swapInfo, _ := sysinfo.Swap(ctx)
+
+			respTime := time.Now().UnixMicro()
+			elapsed := respTime - reqTime
+
+			pong := control.Pong{
+				Time:    uint64(reqTime + elapsed/2),
+				Elapsed: uint64(elapsed),
 			}
+			if memInfo != nil {
+				pong.MemInfo = *memInfo
+			}
+			if swapInfo != nil {
+				pong.SwapInfo = *swapInfo
+			}
+			response = pong
 
 		case control.MsgConnReq:
 			var msg control.ConnReq

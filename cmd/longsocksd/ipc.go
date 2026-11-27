@@ -142,6 +142,7 @@ ca = """
 
 certificate_file = "/var/lib/longsocks/diald.crt"
 private_key_file = "/var/lib/longsocks/diald.key"
+allowed_ports = [22]
 `
 	dialdTmpl = template.Must(template.New("diald.conf").Parse(dialdConfig))
 
@@ -229,7 +230,7 @@ func processCommand(args []string) ([]string, error) {
 
 	case "ls", "list":
 		result := []string{"list"}
-		for k, v := range hosts {
+		for k, v := range dialds {
 			var id string
 			if len(v.ID) != 0 {
 				id = v.ID
