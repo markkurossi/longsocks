@@ -23,6 +23,10 @@ func socksHandler(conn net.Conn, cmd socks5.Command, ip net.IP, hostname string,
 	port int) error {
 
 	log.Printf("%v: ip=%v, hostname=%v, port=%d", cmd, ip, hostname, port)
+	if cmd != socks5.CmdConnect {
+		socks5.Response(conn, socks5.ReplyCommandNotSupported, nil, "", 0)
+		return fmt.Errorf("command %v not supported", cmd)
+	}
 
 	diald, err := LookupHost(ip, hostname)
 	if err != nil {
