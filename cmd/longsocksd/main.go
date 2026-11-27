@@ -87,11 +87,13 @@ func main() {
 	}
 	wg.Go(socks.Run)
 
-	httpd, err := NewHTTPD()
-	if err != nil {
-		log.Fatal(err)
+	if len(config.Longsocksd.HTTP.Listen) > 0 {
+		httpd, err := NewHTTPD()
+		if err != nil {
+			log.Fatal(err)
+		}
+		wg.Go(httpd.Run)
 	}
-	wg.Go(httpd.Run)
 
 	wg.Wait()
 }

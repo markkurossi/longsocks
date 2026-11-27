@@ -7,6 +7,7 @@
 package main
 
 import (
+	"bytes"
 	"embed"
 	"fmt"
 	"html/template"
@@ -71,10 +72,16 @@ func NewHTTPD() (*HTTPD, error) {
 			http.NotFound(w, r)
 			return
 		}
-		err := tmpl.Execute(w, getStats())
+		var buf bytes.Buffer
+		err := tmpl.Execute(&buf, getStats())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Printf("HTTP template execution failed: %v", err)
+			return
 		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = buf.WriteTo(w)
 	})
 
 	return &HTTPD{
