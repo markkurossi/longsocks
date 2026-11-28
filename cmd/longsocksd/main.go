@@ -9,12 +9,12 @@ package main
 import (
 	"encoding/binary"
 	"flag"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/markkurossi/longsocks"
+	"github.com/markkurossi/longsocks/log"
 )
 
 var (
@@ -27,8 +27,6 @@ var (
 )
 
 func main() {
-	log.SetFlags(0)
-
 	cfgDir := flag.String("config", longsocks.EtcDir, "config file directory")
 	stateDir := flag.String("state-dir", longsocks.VarLibDir,
 		"directory for persistent state")
@@ -60,13 +58,13 @@ func main() {
 	identity, err = longsocks.LoadIdentity(config.Longsocksd.PrivateKeyFile,
 		config.Longsocksd.CertificateFile)
 	if os.IsNotExist(err) {
-		log.Printf("creating identity %v", config.Longsocksd.CertificateFile)
+		log.Infof("creating identity %v", config.Longsocksd.CertificateFile)
 		identity, err = longsocks.CreateIdentity(config)
 		if err != nil {
 			log.Fatalf("failed to create identity: %v", err)
 		}
 	} else {
-		log.Printf("loaded identity %v", config.Longsocksd.CertificateFile)
+		log.Infof("loaded identity %v", config.Longsocksd.CertificateFile)
 	}
 
 	var wg sync.WaitGroup

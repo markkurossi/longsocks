@@ -12,9 +12,10 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
-	"log"
 	"net/http"
 	"time"
+
+	"github.com/markkurossi/longsocks/log"
 )
 
 //go:embed templates/index.html static/style.css
@@ -76,7 +77,7 @@ func NewHTTPD() (*HTTPD, error) {
 		err := tmpl.Execute(&buf, getStats())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			log.Printf("HTTP template execution failed: %v", err)
+			log.Errorf("HTTP template execution failed: %v", err)
 			return
 		}
 
@@ -190,7 +191,7 @@ func getStats() *StatsPage {
 }
 
 func (httpd *HTTPD) Run() {
-	log.Printf("Longsocks statistics: http://localhost%s", httpd.server.Addr)
+	log.Infof("Longsocks statistics: http://localhost%s", httpd.server.Addr)
 	log.Fatal(httpd.server.ListenAndServe())
 }
 
@@ -198,7 +199,7 @@ func logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		next.ServeHTTP(w, r)
-		log.Printf("%s %s %s", r.Method, r.URL.Path, time.Since(start))
+		log.Debugf("%s %s %s", r.Method, r.URL.Path, time.Since(start))
 	})
 }
 

@@ -8,9 +8,9 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
 
+	"github.com/markkurossi/longsocks/log"
 	"github.com/markkurossi/longsocks/socks5"
 )
 
@@ -22,7 +22,7 @@ func NewSocksServer() (*socks5.Server, error) {
 func socksHandler(conn net.Conn, cmd socks5.Command, ip net.IP, hostname string,
 	port int) error {
 
-	log.Printf("%v: ip=%v, hostname=%v, port=%d", cmd, ip, hostname, port)
+	log.Infof("%v: ip=%v, hostname=%v, port=%d", cmd, ip, hostname, port)
 	if cmd != socks5.CmdConnect {
 		socks5.Response(conn, socks5.ReplyCommandNotSupported, nil, "", 0)
 		return fmt.Errorf("command %v not supported", cmd)
@@ -37,7 +37,7 @@ func socksHandler(conn net.Conn, cmd socks5.Command, ip net.IP, hostname string,
 		return fmt.Errorf("%v: port %v not allowed", diald, port)
 	}
 
-	log.Printf("diald: %v", diald)
+	log.Infof("diald: %v", diald)
 
 	diald.ch <- ConnReq{
 		IP:       ip,

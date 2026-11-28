@@ -8,7 +8,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strings"
 	"sync"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/markkurossi/go-libs/uuid"
 	"github.com/markkurossi/longsocks/control"
+	"github.com/markkurossi/longsocks/log"
 	"github.com/markkurossi/longsocks/socks5"
 	"github.com/markkurossi/longsocks/sysinfo"
 )
@@ -203,19 +203,19 @@ func NewAppConn(conn net.Conn, cookie string) {
 	m.Unlock()
 
 	if !ok {
-		log.Printf("unknown appcon %v", cookie)
+		log.Errorf("unknown appcon %v", cookie)
 		return
 	}
 	delete(appConnReqs, cookie)
 
 	err := socks5.Response(appConn, socks5.ReplySucceeded, nil, "", 0)
 	if err != nil {
-		log.Printf("SOCK5 reply error: %v", err)
+		log.Errorf("SOCK5 reply error: %v", err)
 		appConn.Close()
 		conn.Close()
 		return
 	}
 
 	control.Relay(appConn, conn)
-	log.Printf("appcon %v closed", cookie)
+	log.Infof("appcon %v closed", cookie)
 }

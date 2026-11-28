@@ -12,13 +12,13 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"strings"
 	"text/template"
 
 	"github.com/markkurossi/longsocks"
+	"github.com/markkurossi/longsocks/log"
 )
 
 // IPC defines the local control IPC server.
@@ -44,7 +44,7 @@ func (ipc *IPC) Run() {
 	for {
 		conn, err := ipc.listener.Accept()
 		if err != nil {
-			log.Printf("IPC accept: %v", err)
+			log.Infof("IPC accept: %v", err)
 			continue
 		}
 
@@ -64,7 +64,7 @@ type IPCConnection struct {
 func (c *IPCConnection) msgLoop() {
 	err := c.processMessages()
 	if err != nil {
-		log.Printf("IPC: %v", err)
+		log.Errorf("IPC: %v", err)
 	}
 	c.conn.Close()
 }
@@ -99,7 +99,7 @@ func (c *IPCConnection) processMessages() error {
 		if n != l {
 			return fmt.Errorf("IPC stream out of sync: %v vs. %v", n, l)
 		}
-		log.Printf("args: %v", args)
+		log.Infof("args: %v", args)
 
 		var responseValues []string
 

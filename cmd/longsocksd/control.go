@@ -11,12 +11,12 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"net"
 	"time"
 
 	"github.com/markkurossi/longsocks"
 	"github.com/markkurossi/longsocks/control"
+	"github.com/markkurossi/longsocks/log"
 )
 
 type Control struct {
@@ -58,7 +58,7 @@ func (ctrl *Control) Run() {
 	for {
 		conn, err := ctrl.listener.Accept()
 		if err != nil {
-			log.Printf("failed to accept control connection: %v", err)
+			log.Errorf("failed to accept control connection: %v", err)
 			continue
 		}
 		go ctrl.handler(conn)
@@ -70,12 +70,12 @@ func (ctrl *Control) handler(conn net.Conn) {
 
 	tlsConn, ok := conn.(*tls.Conn)
 	if !ok {
-		log.Println("Not a TLS connection")
+		log.Errorf("Not a TLS connection")
 		return
 	}
 
 	if err := tlsConn.Handshake(); err != nil {
-		log.Printf("Handshake failed: %v", err)
+		log.Errorf("Handshake failed: %v", err)
 		return
 	}
 
@@ -83,29 +83,29 @@ func (ctrl *Control) handler(conn net.Conn) {
 
 	// Check if this is client init with random UUID.
 	if len(state.PeerCertificates) == 0 {
-		log.Printf("client init with UUID")
+		log.Infof("client init with UUID")
 		err := ctrl.tokenHandler(conn)
 		if err != nil {
-			log.Printf("tokenHandler failed: %v", err)
+			log.Errorf("tokenHandler failed: %v", err)
 			ctrl.sendError(conn, err)
 		}
 		return
 	}
 	if len(state.VerifiedChains) == 0 {
-		log.Printf("mTLS with invalid client certificate")
+		log.Errorf("mTLS with invalid client certificate")
 		return
 	}
 
 	clientCert := state.VerifiedChains[0][0]
 
-	log.Printf("client for DNS names %v", clientCert.DNSNames)
+	log.Infof("client for DNS names %v", clientCert.DNSNames)
 
 	// Start processing commands from the authenticated control
 	// connection.
 
 	msgType, data, err := control.Recv(conn)
 	if err != nil {
-		log.Printf("failed to read message: %v", err)
+		log.Errorf("failed to read message: %v", err)
 		return
 	}
 
@@ -114,7 +114,7 @@ func (ctrl *Control) handler(conn net.Conn) {
 		var msg control.CtrlCh
 		_, err = longsocks.UnmarshalFrom(data, &msg)
 		if err != nil {
-			log.Printf("invalid %v message: %v", msgType, err)
+			log.Errorf("invalid %v message: %v", msgType, err)
 			return
 		}
 		NewHost(clientCert.DNSNames, conn, msg.AllowedPorts, msg.AgentInfo,
@@ -124,14 +124,14 @@ func (ctrl *Control) handler(conn net.Conn) {
 		var msg control.AppCh
 		_, err = longsocks.UnmarshalFrom(data, &msg)
 		if err != nil {
-			log.Printf("invalid %v message: %v", msgType, err)
+			log.Errorf("invalid %v message: %v", msgType, err)
 			return
 		}
-		log.Printf("appcon %v", msg.Cookie)
+		log.Infof("appcon %v", msg.Cookie)
 		NewAppConn(conn, msg.Cookie)
 
 	default:
-		log.Printf("msg %v not implemented yet:\n%s", msgType, hex.Dump(data))
+		log.Errorf("msg %v not implemented yet:\n%s", msgType, hex.Dump(data))
 	}
 }
 
@@ -168,7 +168,7 @@ func (ctrl *Control) tokenHandler(conn net.Conn) error {
 	msgType := control.MsgType(hdr[0])
 	l := bo.Uint32(hdr[1:])
 
-	log.Printf("%v: %d bytes", msgType, l)
+	log.Tracef("%v: %d bytes", msgType, l)
 
 	// Allow only 16kB for unauthenticated connections.
 	if l > 16*1024 {
@@ -195,17 +195,17 @@ func (ctrl *Control) tokenHandler(conn net.Conn) error {
 		if err != nil {
 			return err
 		}
-		log.Printf("CSR: UUID=%s", csr.Subject.CommonName)
+		log.Debugf("CSR: UUID=%s", csr.Subject.CommonName)
 		host, err := Registration(csr.Subject.CommonName)
 		if err != nil {
 			return err
 		}
-		log.Printf("hostname: %v", host.Names)
+		log.Debugf("hostname: %v", host.Names)
 		cert, err := identity.CreateHostCertificate(config, host.Names, csr)
 		if err != nil {
 			return err
 		}
-		log.Printf("cert: issuer=%v, subject=%v", cert.Issuer, cert.Subject)
+		log.Debugf("cert: issuer=%v, subject=%v", cert.Issuer, cert.Subject)
 		data, err = longsocks.Marshal(control.HostInitResp{
 			Cert: cert.Raw,
 		})
@@ -228,7 +228,7 @@ func (ctrl *Control) tokenHandler(conn net.Conn) error {
 		if err != nil {
 			return err
 		}
-		log.Printf("CSR: UUID=%s", csr.Subject.CommonName)
+		log.Debugf("CSR: UUID=%s", csr.Subject.CommonName)
 		cookie, err := longsocks.ParseHex([]string{csr.Subject.CommonName})
 		if err != nil {
 			return err
@@ -240,12 +240,12 @@ func (ctrl *Control) tokenHandler(conn net.Conn) error {
 		if err != nil {
 			return err
 		}
-		log.Printf("hostname: %v", host.Names)
+		log.Debugf("hostname: %v", host.Names)
 		cert, err := identity.CreateHostCertificate(config, host.Names, csr)
 		if err != nil {
 			return err
 		}
-		log.Printf("cert: issuer=%v, subject=%v", cert.Issuer, cert.Subject)
+		log.Debugf("cert: issuer=%v, subject=%v", cert.Issuer, cert.Subject)
 
 		config, err := makeDialdConfig(host)
 		if err != nil {
@@ -276,9 +276,9 @@ func (ctrl *Control) tokenHandler(conn net.Conn) error {
 }
 
 func (diald *Diald) control() {
-	log.Printf("control handler for host %v", diald)
+	log.Infof("control handler for host %v", diald)
 	err := diald.eventLoop()
-	log.Printf("%v: connection terminated: %v", diald, err)
+	log.Infof("%v: connection terminated: %v", diald, err)
 }
 
 func (diald *Diald) eventLoop() error {
@@ -287,7 +287,7 @@ func (diald *Diald) eventLoop() error {
 		case cr := <-diald.ch:
 			cookie, err := NewAppConnReq(cr.Conn)
 			if err != nil {
-				log.Printf("failed to create connection request: %v", err)
+				log.Errorf("failed to create connection request: %v", err)
 				cr.Conn.Close()
 				continue
 			}
@@ -300,7 +300,7 @@ func (diald *Diald) eventLoop() error {
 			})
 			diald.SetHealthy(err == nil)
 			if err != nil {
-				log.Printf("failed to create appcon: %v", err)
+				log.Errorf("failed to create appcon: %v", err)
 				cr.Conn.Close()
 			} else {
 				diald.Seen()
@@ -327,24 +327,28 @@ func (diald *Diald) eventLoop() error {
 				_, err := longsocks.UnmarshalFrom(data, &msg)
 				if err != nil {
 					diald.SetHealthy(false)
-					log.Printf("failed to decode pong: %v\n%s",
+					log.Errorf("failed to decode pong: %v\n%s",
 						err, hex.Dump(data))
 				}
 
 				d := int64(msg.Time) - expectedTime
-				log.Printf("%v keepalive: rtt=%v, delta=%v",
-					diald, time.Duration(rtt*1000), time.Duration(d*1000))
+
+				netRTT := rtt - int64(msg.Elapsed)
+
+				log.Debugf("%v keepalive: rtt=%v, netRTT=%v, delta=%v",
+					diald, time.Duration(rtt*1000), time.Duration(netRTT*1000),
+					time.Duration(d*1000))
 
 				diald.MemInfo = msg.MemInfo
 				diald.SwapInfo = msg.SwapInfo
 
-				log.Printf("%v mem: %v/%v, swap: %v/%v",
+				log.Debugf("%v mem: %v/%v, swap: %v/%v",
 					diald,
 					msg.MemInfo.Available, msg.MemInfo.Total,
 					msg.SwapInfo.Free, msg.SwapInfo.Total)
 
 			default:
-				log.Printf("%v:\n%s", t, hex.Dump(data))
+				log.Errorf("%v:\n%s", t, hex.Dump(data))
 				return fmt.Errorf("%v unsupported", t)
 			}
 		}
